@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Norsk Puls</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0B1220;
+    --surface: #111A2C;
+    --border: #1B2438;
+    --border2: #2A3348;
+    --text: #EDEFF5;
+    --muted: #8B93A7;
+    --muted2: #5C6580;
+    --green: #4ADE8C;
+    --violet: #8B7FE8;
+    --amber: #F0C168;
+    --red: #EF6F6C;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .display { font-family: 'Space Grotesk', sans-serif; }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  h1 { font-size: 24px; font-weight: 600; margin: 0; }
+  .aurora-text {
+    background: linear-gradient(90deg, var(--green), var(--violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .subtitle { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  .header-row { display: flex; align-items: baseline; justify-content: space-between; }
+  .level-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 999px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin: 24px 0;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+  .tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .tab-btn.active {
+    background: #151E33;
+    color: var(--text);
+    border-color: var(--border2);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .card-label { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+  .sentence { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
+  .translation { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
+
+  .btn-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border2);
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .btn:hover { border-color: var(--violet); }
+  .btn.listen:hover { border-color: var(--green); }
+  .btn.listening { border-color: var(--green); color: var(--green); animation: pulseRing 1.4s infinite; }
+  .btn.next { border: none; color: var(--violet); padding-left: 0; }
+
+  @keyframes pulseRing {
+    0% { box-shadow: 0 0 0 0 rgba(74,222,140,0.45), 0 0 0 0 rgba(139,127,232,0.3); }
+    70% { box-shadow: 0 0 0 14px rgba(74,222,140,0), 0 0 0 26px rgba(139,127,232,0); }
+    100% { box-shadow: 0 0 0 0 rgba(74,222,140,0), 0 0 0 0 rgba(139,127,232,0); }
+  }
+
+  .error-text { color: var(--red); font-size: 13px; margin-top: 12px; }
+  .heard-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .heard-label { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+  .match-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; color: var(--muted); }
+  .score-pill { font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .word-pill { font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 4px 8px; border-radius: 6px; border: 1px solid; }
+  .feedback-text { font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .note { font-size: 12px; color: var(--muted2); margin-top: 16px; line-height: 1.5; }
+
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .opt-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: none;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    cursor: pointer;
+  }
+  .opt-btn.correct { border-color: var(--green); background: rgba(74,222,140,0.1); }
+  .opt-btn.wrong { border-color: var(--red); background: rgba(239,111,108,0.1); }
+  .opt-btn.dim { border-color: var(--border); opacity: 0.5; }
+
+  .center-card { text-align: center; }
+  .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header-row">
+    <h1 class="display">Norsk <span class="aurora-text">Puls</span></h1>
+    <span class="level-badge" id="levelBadge">nível 1 / 3</span>
+  </div>
+  <p class="subtitle">Português → Norueguês, com foco na pronúncia</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="practice">🎙️ Praticar</button>
+    <button class="tab-btn" data-tab="exercises">📘 Exercícios</button>
+    <button class="tab-btn" data-tab="test">🏆 Teste semanal</button>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<script>
+// ---------- Data ----------
+const ITEMS = [
+  { id: 1, level: 1, blank: "___ heter David.", answer: "Jeg", pt: "Eu chamo-me David.", options: ["Jeg", "Du", "Han", "Vi", "Dere"] },
+  { id: 2, level: 1, blank: "___ bor i Bergen.", answer: "Hun", pt: "Ela mora em Bergen.", options: ["Hun", "Jeg", "De", "Dere", "Vi"] },
+  { id: 3, level: 1, blank: "___ er lærer.", answer: "Han", pt: "Ele é professor.", options: ["Han", "Hun", "Jeg", "Vi", "De"] },
+  { id: 4, level: 1, blank: "___ snakker norsk.", answer: "Vi", pt: "Nós falamos norueguês.", options: ["Vi", "Dere", "De", "Jeg", "Du"] },
+  { id: 5, level: 1, blank: "___ er fra Portugal.", answer: "Dere", pt: "Vocês são de Portugal.", options: ["Dere", "Vi", "De", "Han", "Hun"] },
+  { id: 6, level: 2, blank: "___ heter du?", answer: "Hva", pt: "Como te chamas?", options: ["Hva", "Hvor", "Hvem", "Når", "Hvordan"] },
+  { id: 7, level: 2, blank: "___ er du fra?", answer: "Hvor", pt: "De onde és?", options: ["Hvor", "Hva", "Hvem", "Hvorfor", "Når"] },
+  { id: 8, level: 2, blank: "___ er det?", answer: "Hvem", pt: "Quem é?", options: ["Hvem", "Hva", "Hvor", "Når", "Hvordan"] },
+  { id: 9, level: 2, blank: "___ kommer toget?", answer: "Når", pt: "Quando chega o comboio?", options: ["Når", "Hvor", "Hvem", "Hva", "Hvordan"] },
+  { id: 10, level: 2, blank: "___ har du det i dag?", answer: "Hvordan", pt: "Como estás hoje?", options: ["Hvordan", "Hvorfor", "Hva", "Hvem", "Når"] },
+  { id: 11, level: 3, blank: "Jeg ___ til Norge om seks måneder.", answer: "flytter", pt: "Eu mudo-me para a Noruega daqui a seis meses.", options: ["flytter", "bor", "jobber", "snakker", "heter"] },
+  { id: 12, level: 3, blank: "Hun ___ norsk hver dag.", answer: "øver", pt: "Ela pratica norueguês todos os dias.", options: ["øver", "spiser", "sover", "kjører", "leser"] },
+];
+const fullSentence = (item) => item.blank.replace("___", item.answer);
+
+// ---------- Matching helpers ----------
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+function wordSimilarity(a, b) {
+  if (!a || !b) return 0;
+  const dist = levenshtein(a, b);
+  const maxLen = Math.max(a.length, b.length);
+  return maxLen === 0 ? 1 : 1 - dist / maxLen;
+}
+function normalize(s) { return s.toLowerCase().replace(/[.,!?;:]/g, "").trim(); }
+function compareSentences(target, heard) {
+  const targetWords = normalize(target).split(/\s+/).filter(Boolean);
+  const heardWords = normalize(heard).split(/\s+/).filter(Boolean);
+  const results = targetWords.map((tw) => {
+    let best = 0;
+    for (const hw of heardWords) best = Math.max(best, wordSimilarity(tw, hw));
+    return { word: tw, score: best };
+  });
+  const overall = results.length ? Math.round((results.reduce((s, r) => s + r.score, 0) / results.length) * 100) : 0;
+  return { results, overall };
+}
+
+// ---------- Storage (localStorage — this runs as a standalone file, not a Claude artifact) ----------
+const STORAGE_KEY = "norsk-puls-progress";
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { level: 1, history: [] };
+  } catch { return { level: 1, history: [] }; }
+}
+function saveProgress(p) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
+}
+let progress = loadProgress();
+
+// ---------- Speech ----------
+function speak(text, onError) {
+  if (!window.speechSynthesis) { onError && onError("A síntese de voz não é suportada neste navegador."); return; }
+  const doSpeak = () => {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "nb-NO";
+    const voices = window.speechSynthesis.getVoices();
+    const noVoice = voices.find(v => v.lang && (v.lang.toLowerCase().startsWith("nb") || v.lang.toLowerCase().startsWith("no")));
+    if (noVoice) utter.voice = noVoice;
+    utter.rate = 0.9;
+    utter.onerror = () => onError && onError("Não foi possível reproduzir o áudio.");
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  };
+  const existing = window.speechSynthesis.getVoices();
+  if (existing.length > 0) doSpeak();
+  else {
+    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.onvoiceschanged = null; doSpeak(); };
+    setTimeout(doSpeak, 300);
+  }
+}
+function getRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const rec = new SR();
+  rec.lang = "nb-NO";
+  rec.interimResults = true;
+  rec.continuous = false;
+  return rec;
+}
+
+// ---------- State ----------
+let currentTab = "practice";
+let practiceIdx = 0, exerciseIdx = 0, exerciseScore = { correct: 0, total: 0 }, exerciseOptions = null;
+let listening = false, heard = "", result = null, micError = "";
+let recInstance = null;
+let exSelected = null;
+let testState = { running: false, set: [], idx: 0, selected: null, tally: 0, finished: false, lastScore: null };
+
+function pool() { return ITEMS.filter(i => i.level <= progress.level); }
+
+// ---------- Render ----------
+function render() {
+  document.getElementById("levelBadge").textContent = `nível ${progress.level} / 3`;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === currentTab));
+  const el = document.getElementById("content");
+  if (currentTab === "practice") el.innerHTML = renderPractice();
+  else if (currentTab === "exercises") el.innerHTML = renderExercises();
+  else el.innerHTML = renderTest();
+  attachHandlers();
+}
+
+function renderPractice() {
+  const p = pool();
+  const item = p[practiceIdx % p.length];
+  const target = fullSentence(item);
+  const supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  let heardBlock = "";
+  if (heard) {
+    let pillsHtml = "", scoreHtml = "", feedbackHtml = "";
+    if (result) {
+      const c = result.overall >= 80 ? "var(--green)" : result.overall >= 50 ? "var(--amber)" : "var(--red)";
+      scoreHtml = `<div class="match-row">correspondência: <span class="score-pill" style="color:${c};border-color:${c}">${result.overall}%</span></div>`;
+      pillsHtml = `<div class="pills">` + result.results.map(r => {
+        const bg = r.score >= 0.8 ? "rgba(74,222,140,0.18)" : r.score >= 0.5 ? "rgba(240,193,104,0.18)" : "rgba(239,111,108,0.18)";
+        const border = r.score >= 0.8 ? "var(--green)" : r.score >= 0.5 ? "var(--amber)" : "var(--red)";
+        return `<span class="word-pill" style="background:${bg};border-color:${border}">${r.word}</span>`;
+      }).join("") + `</div>`;
+      const msg = result.overall >= 80 ? "Muito bem! Pronúncia sólida." : result.overall >= 50 ? "Está no bom caminho — repete devagar as palavras a amarelo/vermelho." : "Ouve a frase outra vez e tenta repetir palavra a palavra.";
+      feedbackHtml = `<p class="feedback-text">${msg}</p>`;
+    }
+    heardBlock = `<div class="heard-block"><p class="heard-label">ouvi: <span style="color:var(--text)">${heard}</span></p>${scoreHtml}${pillsHtml}${feedbackHtml}</div>`;
+  }
+
+  return `
+    <div class="card">
+      <p class="card-label mono">frase ${(practiceIdx % p.length) + 1} de ${p.length}</p>
+      <p class="sentence display">${target}</p>
+      <p class="translation">${item.pt}</p>
+      <div class="btn-row">
+        <button class="btn listen" id="btnOuvir">🔊 Ouvir</button>
+        ${supported
+          ? `<button class="btn ${listening ? "listening" : ""}" id="btnFalar">🎙️ ${listening ? "A ouvir... (toca para parar)" : "Falar"}</button>`
+          : `<span class="error-text">reconhecimento de voz não suportado neste navegador</span>`}
+      </div>
+      ${micError ? `<p class="error-text">${micError}</p>` : ""}
+      ${heardBlock}
+      <button class="btn next" id="btnNext">Próxima frase →</button>
+    </div>
+    <p class="note">Nota: a pontuação compara o que o reconhecimento de voz percebeu com a frase-alvo — é um bom indicador para começar, mas ainda não é uma análise fonética completa.</p>
+  `;
+}
+
+function renderExercises() {
+  const p = pool();
+
+  if (exerciseIdx >= p.length) {
+    const pct = exerciseScore.total ? Math.round((exerciseScore.correct / exerciseScore.total) * 100) : 0;
+    return `
+      <div class="card center-card">
+        <p class="display" style="font-size:28px;font-weight:600;margin:8px 0">${pct}%</p>
+        <p class="translation" style="margin-bottom:24px">Completaste os ${p.length} exercícios deste nível — ${exerciseScore.correct}/${exerciseScore.total} certas.</p>
+        <button class="btn" id="btnRestartEx" style="margin:0 auto">↺ Recomeçar</button>
+      </div>`;
+  }
+
+  const item = p[exerciseIdx];
+  if (!exerciseOptions) exerciseOptions = shuffle(item.options);
+  const optsHtml = exerciseOptions.map(opt => {
+    const isCorrect = opt === item.answer;
+    const isSelected = opt === exSelected;
+    let cls = "opt-btn";
+    if (exSelected) {
+      if (isCorrect) cls += " correct";
+      else if (isSelected) cls += " wrong";
+      else cls += " dim";
+    }
+    return `<button class="${cls}" data-opt="${opt}">${opt}${exSelected && isCorrect ? " ✓" : ""}${exSelected && isSelected && !isCorrect ? " ✗" : ""}</button>`;
+  }).join("");
+
+  return `
+    <div class="card">
+      <div class="top-row">
+        <p class="card-label mono" style="margin:0">exercício ${exerciseIdx + 1} de ${p.length}</p>
+        <span class="mono" style="font-size:12px;color:var(--muted)">${exerciseScore.correct}/${exerciseScore.total} certas</span>
+      </div>
+      <p class="sentence display">${item.blank}</p>
+      <p class="translation">${item.pt}</p>
+      <div class="options">${optsHtml}</div>
+      ${exSelected ? `<button class="btn next" id="btnExNext" style="margin-top:20px">Próxima →</button>` : ""}
+    </div>
+  `;
+}
+
+function renderTest() {
+  if (testState.finished) {
+    const s = testState.lastScore;
+    const msg = s >= 80 ? "Excelente semana — vamos avançar de nível." : s >= 50 ? "Boa semana — vamos consolidar mais um pouco antes de avançar." : "Sem problema, esta semana fica para reforçar a base. Vamos repetir a matéria.";
+    return `
+      <div class="card center-card">
+        <p class="display" style="font-size:28px;font-weight:600;margin:8px 0">${s}%</p>
+        <p class="translation" style="margin-bottom:24px">${msg}</p>
+        <button class="btn" id="btnRestartTest" style="margin:0 auto">↺ Repetir teste</button>
+      </div>`;
+  }
+  if (!testState.running) {
+    return `
+      <div class="card center-card">
+        <p class="translation">${progress.history.length === 0 ? "Ainda não fizeste nenhum teste." : `Últimos testes: ${progress.history.length}`}</p>
+        <p class="translation" style="margin-bottom:24px">80% ou mais avança-te de nível. Menos de 50% repete a matéria desta semana.</p>
+        <button class="btn" id="btnStartTest" style="margin:0 auto">Começar teste →</button>
+      </div>`;
+  }
+  const item = testState.set[testState.idx];
+  if (!testState.currentOptions) testState.currentOptions = shuffle(item.options);
+  const optsHtml = testState.currentOptions.map(opt => {
+    const isCorrect = opt === item.answer;
+    const isSelected = opt === testState.selected;
+    let cls = "opt-btn";
+    if (testState.selected) {
+      if (isCorrect) cls += " correct";
+      else if (isSelected) cls += " wrong";
+      else cls += " dim";
+    }
+    return `<button class="${cls}" data-opt="${opt}">${opt}${testState.selected && isCorrect ? " ✓" : ""}${testState.selected && isSelected && !isCorrect ? " ✗" : ""}</button>`;
+  }).join("");
+  return `
+    <div class="card">
+      <p class="card-label mono">pergunta ${testState.idx + 1} de ${testState.set.length}</p>
+      <p class="sentence display">${item.blank}</p>
+      <p class="translation">${item.pt}</p>
+      <div class="options">${optsHtml}</div>
+      ${testState.selected ? `<button class="btn next" id="btnTestNext" style="margin-top:20px">${testState.idx + 1 < testState.set.length ? "Próxima" : "Ver resultado"} →</button>` : ""}
+    </div>`;
+}
+
+// ---------- Handlers ----------
+function attachHandlers() {
+  if (currentTab === "practice") {
+    const btnOuvir = document.getElementById("btnOuvir");
+    if (btnOuvir) btnOuvir.onclick = () => {
+      const p = pool(); const item = p[practiceIdx % p.length];
+      speak(fullSentence(item), (msg) => { micError = msg; render(); });
+    };
+    const btnFalar = document.getElementById("btnFalar");
+    if (btnFalar) btnFalar.onclick = () => { listening ? stopListening() : startListening(); };
+    const btnNext = document.getElementById("btnNext");
+    if (btnNext) btnNext.onclick = () => {
+      practiceIdx++; heard = ""; result = null; micError = "";
+      render();
+    };
+  }
+  if (currentTab === "exercises") {
+    document.querySelectorAll(".options .opt-btn").forEach(b => {
+      b.onclick = () => {
+        if (exSelected) return;
+        exSelected = b.dataset.opt;
+        const p = pool(); const item = p[exerciseIdx];
+        exerciseScore.total++;
+        if (exSelected === item.answer) exerciseScore.correct++;
+        render();
+      };
+    });
+    const btnExNext = document.getElementById("btnExNext");
+    if (btnExNext) btnExNext.onclick = () => { exerciseIdx++; exSelected = null; exerciseOptions = null; render(); };
+    const btnRestartEx = document.getElementById("btnRestartEx");
+    if (btnRestartEx) btnRestartEx.onclick = () => { exerciseIdx = 0; exSelected = null; exerciseOptions = null; exerciseScore = { correct: 0, total: 0 }; render(); };
+  }
+  if (currentTab === "test") {
+    const btnStart = document.getElementById("btnStartTest");
+    if (btnStart) btnStart.onclick = () => startTest();
+    const btnRestart = document.getElementById("btnRestartTest");
+    if (btnRestart) btnRestart.onclick = () => startTest();
+    document.querySelectorAll(".options .opt-btn").forEach(b => {
+      b.onclick = () => {
+        if (testState.selected) return;
+        testState.selected = b.dataset.opt;
+        const item = testState.set[testState.idx];
+        if (testState.selected === item.answer) testState.tally++;
+        render();
+      };
+    });
+    const btnTestNext = document.getElementById("btnTestNext");
+    if (btnTestNext) btnTestNext.onclick = () => {
+      if (testState.idx + 1 < testState.set.length) { testState.idx++; testState.selected = null; testState.currentOptions = null; render(); }
+      else finishTest();
+    };
+  }
+}
+
+function startListening() {
+  const rec = getRecognition();
+  if (!rec) { render(); return; }
+  recInstance = rec;
+  heard = ""; result = null; micError = ""; listening = true;
+  render();
+  rec.onresult = (e) => {
+    let transcript = "";
+    for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+    heard = transcript;
+    render();
+  };
+  rec.onerror = (e) => {
+    listening = false;
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") micError = "Permissão de microfone negada. Verifica as permissões do navegador.";
+    else if (e.error === "no-speech") micError = "Não ouvi nada. Tenta falar mais perto do microfone.";
+    else micError = "Não foi possível usar o microfone neste navegador.";
+    render();
+  };
+  rec.onend = () => {
+    listening = false;
+    const p = pool(); const item = p[practiceIdx % p.length];
+    if (heard) result = compareSentences(fullSentence(item), heard);
+    render();
+  };
+  try { rec.start(); } catch { listening = false; micError = "Não foi possível iniciar o microfone."; render(); }
+}
+function stopListening() { if (recInstance) recInstance.stop(); }
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i+1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function startTest() {
+  const p = pool();
+  const size = Math.min(8, p.length);
+  testState = { running: true, set: shuffle(p).slice(0, size), idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
+  render();
+}
+function finishTest() {
+  const scorePct = Math.round((testState.tally / testState.set.length) * 100);
+  let newLevel = progress.level;
+  if (scorePct >= 80 && progress.level < 3) newLevel = progress.level + 1;
+  progress.level = newLevel;
+  progress.history.push({ date: new Date().toISOString(), score: scorePct, levelAfter: newLevel });
+  saveProgress(progress);
+  testState.finished = true; testState.running = false; testState.lastScore = scorePct;
+  render();
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.onclick = () => { currentTab = btn.dataset.tab; render(); };
+});
+
+render();
+</script>
+</body>
+</html>
