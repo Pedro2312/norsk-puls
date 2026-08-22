@@ -65,7 +65,12 @@
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
   }
-  #themeTabs .tab-btn { flex-shrink: 0; }
+  #mainTabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  #themeTabs .tab-btn, #mainTabs .tab-btn { flex-shrink: 0; }
   .tab-btn {
     display: flex;
     align-items: center;
@@ -120,6 +125,29 @@
     70% { box-shadow: 0 0 0 14px rgba(74,222,140,0), 0 0 0 26px rgba(139,127,232,0); }
     100% { box-shadow: 0 0 0 0 rgba(74,222,140,0), 0 0 0 0 rgba(139,127,232,0); }
   }
+
+  .canvas-wrap {
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    overflow: hidden;
+    touch-action: none;
+    background: #0e1626;
+    margin: 4px 0 16px;
+  }
+  .canvas-wrap canvas { display: block; width: 100%; height: 220px; }
+
+  .gloss-block {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .gloss-line {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 4px 0;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .gloss-line b { color: var(--text); }
 
   .error-text { color: var(--red); font-size: 13px; margin-top: 12px; }
   .heard-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
@@ -217,6 +245,7 @@
 
   <div class="tabs" id="mainTabs">
     <button class="tab-btn active" data-tab="practice">🎙️ Praticar</button>
+    <button class="tab-btn" data-tab="write">✍️ Escrever</button>
     <button class="tab-btn" data-tab="exercises">📘 Exercícios</button>
     <button class="tab-btn" data-tab="test">🏆 Teste</button>
     <button class="tab-btn" data-tab="add">➕ Adicionar</button>
@@ -288,6 +317,44 @@ const THEMES = [
   { id: "trabalho", label: "🔧 Trabalho" },
 ];
 const fullSentence = (item) => item.blank.replace("___", item.answer);
+
+// Word-level Portuguese glosses for every option used in the built-in exercises,
+// so the person can see what each choice means, not just which one was correct.
+const GLOSS = {
+  jeg: "eu", du: "tu", han: "ele", vi: "nós", dere: "vós / vocês", hun: "ela", de: "eles / elas",
+  hva: "o quê", hvor: "onde", hvem: "quem", når: "quando", hvordan: "como", hvorfor: "porquê",
+  flytter: "muda-se / move-se", bor: "mora", jobber: "trabalha", snakker: "fala", heter: "chama-se",
+  øver: "pratica", spiser: "come", sover: "dorme", kjører: "conduz", leser: "lê",
+  er: "é / está", har: "tem", fra: "de", til: "para", i: "em", på: "em / sobre", med: "com",
+  møte: "encontrar", se: "ver", høre: "ouvir", snakke: "falar", vite: "saber",
+  dag: "dia", kveld: "noite / entardecer", uke: "semana", jobb: "trabalho", tur: "passeio",
+  sees: "vemo-nos", snakkes: "falamo-nos", møtes: "encontramo-nos", ringer: "liga / telefona", går: "vai",
+  ja: "sim", nei: "não", kanskje: "talvez", takk: "obrigado", vær: "sê / está (imperativo)",
+  kan: "consigo / sei", vil: "quero", skal: "vou / devo", må: "tenho de",
+  to: "dois", tre: "três", en: "um", fire: "quatro", fem: "cinco", sju: "sete", åtte: "oito",
+  seks: "seis", ni: "nove", ti: "dez", hundre: "cem", tjue: "vinte", tusen: "mil", femti: "cinquenta", tolv: "doze",
+  menyen: "o menu", regningen: "a conta", vannet: "a água", brødet: "o pão", kaffen: "o café",
+  bestille: "pedir / encomendar", spise: "comer", lage: "fazer / cozinhar", kjøpe: "comprar", betale: "pagar",
+  glasset: "o copo", gaffelen: "o garfo", stolen: "a cadeira", gratis: "grátis", dyrt: "caro",
+  varmt: "quente", kaldt: "frio", søtt: "doce", godt: "bom / bem", dårlig: "mau", surt: "azedo",
+  salt: "salgado", sulten: "com fome", tørst: "com sede", mett: "satisfeito / cheio", trøtt: "cansado", glad: "feliz",
+  elektriker: "eletricista", lærer: "professor", kokk: "cozinheiro", sjåfør: "motorista", snekker: "carpinteiro",
+  søker: "procuro", liker: "gosto", lager: "faço / fabrico", selger: "vendo",
+  hansker: "luvas", sko: "sapatos", hjelm: "capacete", briller: "óculos", jakke: "casaco",
+  av: "desligado", varm: "quente", kald: "frio", ny: "novo",
+  sikringen: "o fusível", lyset: "a luz", kabelen: "o cabo", målet: "o medidor / objetivo", planen: "o plano",
+  verktøy: "ferramentas", penger: "dinheiro", tid: "tempo", hjelp: "ajuda", papir: "papel",
+  forsiktig: "cuidadoso", rask: "rápido", sterk: "forte", høy: "alto", stille: "silencioso", barn: "filhos / crianças",
+};
+
+// Looks up a word's meaning: checks the built-in glossary first, then falls back
+// to searching custom items (added by the person) for a matching answer's translation.
+function glossFor(word) {
+  const key = word.toLowerCase();
+  if (GLOSS[key]) return GLOSS[key];
+  const match = allItems().find(i => i.answer.toLowerCase() === key);
+  return match ? match.pt : null;
+}
 
 // ---------- Matching helpers ----------
 function levenshtein(a, b) {
@@ -414,7 +481,7 @@ function getRecognition() {
 // ---------- State ----------
 let currentTab = "practice";
 let currentTheme = "basico";
-let practiceIdx = 0, exerciseIdx = 0, exerciseScore = { correct: 0, total: 0 }, exerciseOptions = null;
+let practiceIdx = 0, exerciseIdx = 0, exerciseScore = { correct: 0, total: 0 }, exerciseOptions = null, writeIdx = 0;
 let listening = false, heard = "", result = null, micError = "", showPhonetic = false;
 let recInstance = null;
 let exSelected = null;
@@ -432,7 +499,7 @@ function renderThemeTabs() {
     b.onclick = () => {
       if (b.dataset.theme === currentTheme) return;
       currentTheme = b.dataset.theme;
-      practiceIdx = 0; heard = ""; result = null; micError = ""; listening = false; showPhonetic = false;
+      practiceIdx = 0; heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0;
       exerciseIdx = 0; exSelected = null; exerciseOptions = null; exerciseScore = { correct: 0, total: 0 };
       testState = { running: false, set: [], idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
       render();
@@ -447,6 +514,7 @@ function render() {
   document.querySelectorAll("#mainTabs .tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === currentTab));
   const el = document.getElementById("content");
   if (currentTab === "practice") el.innerHTML = renderPractice();
+  else if (currentTab === "write") el.innerHTML = renderWrite();
   else if (currentTab === "exercises") el.innerHTML = renderExercises();
   else if (currentTab === "test") el.innerHTML = renderTest();
   else el.innerHTML = renderAdd();
@@ -513,6 +581,33 @@ function renderPractice() {
   `;
 }
 
+function renderWrite() {
+  const p = pool();
+  if (!p.length) {
+    return `<div class="card center-card"><p class="translation">Ainda não há frases neste tema.</p></div>`;
+  }
+  if (writeIdx >= p.length) writeIdx = 0;
+  const item = p[writeIdx];
+  const target = fullSentence(item);
+
+  return `
+    <div class="card">
+      <p class="card-label mono">escrever ${writeIdx + 1} de ${p.length}</p>
+      <p class="sentence display">${target}</p>
+      <p class="translation" style="margin-bottom:16px">${item.pt}</p>
+      <div class="btn-row" style="margin-bottom:16px">
+        <button class="btn listen" id="btnWriteOuvir">🔊 Ouvir</button>
+      </div>
+      <div class="canvas-wrap"><canvas id="writeCanvas"></canvas></div>
+      <div class="btn-row">
+        <button class="btn" id="btnClearCanvas">🧹 Limpar</button>
+        <button class="btn next" id="btnWriteNext">Próxima frase →</button>
+      </div>
+    </div>
+    <p class="note">Escreve a frase à mão na tela, copiando o que vês acima — bom para treinares o æ, ø, å e a ortografia. Não há correção automática, é só para praticares o traço.</p>
+  `;
+}
+
 function renderExercises() {
   const p = pool();
 
@@ -549,6 +644,7 @@ function renderExercises() {
       <p class="sentence display">${item.blank}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
+      ${exSelected ? `<div class="gloss-block">${exerciseOptions.map(o => `<p class="gloss-line"><b>${o}</b> — ${glossFor(o) || "significado não disponível"}</p>`).join("")}</div>` : ""}
       ${exSelected ? `<button class="btn next" id="btnExNext" style="margin-top:20px">Próxima →</button>` : ""}
     </div>
   `;
@@ -592,6 +688,7 @@ function renderTest() {
       <p class="sentence display">${item.blank}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
+      ${testState.selected ? `<div class="gloss-block">${testState.currentOptions.map(o => `<p class="gloss-line"><b>${o}</b> — ${glossFor(o) || "significado não disponível"}</p>`).join("")}</div>` : ""}
       ${testState.selected ? `<button class="btn next" id="btnTestNext" style="margin-top:20px">${testState.idx + 1 < testState.set.length ? "Próxima" : "Ver resultado"} →</button>` : ""}
     </div>`;
 }
@@ -625,6 +722,26 @@ function attachHandlers() {
         render();
       };
     });
+  }
+  if (currentTab === "write") {
+    const btnWriteOuvir = document.getElementById("btnWriteOuvir");
+    if (btnWriteOuvir) btnWriteOuvir.onclick = () => {
+      const p = pool(); const item = p[writeIdx % p.length];
+      speak(fullSentence(item), () => {});
+    };
+    const canvas = document.getElementById("writeCanvas");
+    if (canvas) setupCanvas(canvas);
+    const btnClearCanvas = document.getElementById("btnClearCanvas");
+    if (btnClearCanvas) btnClearCanvas.onclick = () => {
+      const c = document.getElementById("writeCanvas");
+      if (c) c.getContext("2d").clearRect(0, 0, c.width, c.height);
+    };
+    const btnWriteNext = document.getElementById("btnWriteNext");
+    if (btnWriteNext) btnWriteNext.onclick = () => {
+      const p = pool();
+      writeIdx = p.length ? (writeIdx + 1) % p.length : 0;
+      render();
+    };
   }
   if (currentTab === "exercises") {
     document.querySelectorAll(".options .opt-btn").forEach(b => {
@@ -822,6 +939,51 @@ function renderAdd() {
     </div>
     <p class="note">O que adicionares aqui fica guardado neste telemóvel/navegador e entra automaticamente nos exercícios e na prática deste tema. As opções de escolha múltipla são geradas a partir de outras palavras do mesmo tema.</p>
   `;
+}
+
+// ---------- Handwriting canvas (mouse, touch, and stylus via Pointer Events) ----------
+function setupCanvas(canvas) {
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const cssHeight = 220;
+  const cssWidth = canvas.getBoundingClientRect().width || canvas.parentElement.clientWidth;
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+  ctx.scale(dpr, dpr);
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#EDEFF5";
+
+  let drawing = false;
+  let last = null;
+
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  canvas.onpointerdown = (e) => {
+    drawing = true;
+    canvas.setPointerCapture(e.pointerId);
+    last = pos(e);
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fill();
+  };
+  canvas.onpointermove = (e) => {
+    if (!drawing) return;
+    const p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    last = p;
+  };
+  const stop = () => { drawing = false; };
+  canvas.onpointerup = stop;
+  canvas.onpointerleave = stop;
+  canvas.onpointercancel = stop;
 }
 
 function shuffle(arr) {
