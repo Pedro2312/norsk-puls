@@ -123,6 +123,25 @@
 
   .error-text { color: var(--red); font-size: 13px; margin-top: 12px; }
   .heard-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .speed-row { display: flex; align-items: center; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
+  .speed-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .speed-btn {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border2);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .speed-btn.active { border-color: var(--green); color: var(--green); }
+  .phon-toggle {
+    font-size: 12px;
+    padding: 5px 10px;
+    color: var(--violet);
+    border-color: var(--border2);
+  }
   .heard-label { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
   .match-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; color: var(--muted); }
   .score-pill { font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid; }
@@ -210,55 +229,55 @@
 // ---------- Data ----------
 const ITEMS = [
   // ---- Tema: básico (pronomes e perguntas) ----
-  { id: 1, level: 1, theme: "basico", blank: "___ heter David.", answer: "Jeg", pt: "Eu chamo-me David.", options: ["Jeg", "Du", "Han", "Vi", "Dere"] },
-  { id: 2, level: 1, theme: "basico", blank: "___ bor i Bergen.", answer: "Hun", pt: "Ela mora em Bergen.", options: ["Hun", "Jeg", "De", "Dere", "Vi"] },
-  { id: 3, level: 1, theme: "basico", blank: "___ er lærer.", answer: "Han", pt: "Ele é professor.", options: ["Han", "Hun", "Jeg", "Vi", "De"] },
-  { id: 4, level: 1, theme: "basico", blank: "___ snakker norsk.", answer: "Vi", pt: "Nós falamos norueguês.", options: ["Vi", "Dere", "De", "Jeg", "Du"] },
-  { id: 5, level: 1, theme: "basico", blank: "___ er fra Portugal.", answer: "Dere", pt: "Vocês são de Portugal.", options: ["Dere", "Vi", "De", "Han", "Hun"] },
-  { id: 6, level: 1, theme: "basico", blank: "___ heter du?", answer: "Hva", pt: "Como te chamas?", options: ["Hva", "Hvor", "Hvem", "Når", "Hvordan"] },
-  { id: 7, level: 1, theme: "basico", blank: "___ er du fra?", answer: "Hvor", pt: "De onde és?", options: ["Hvor", "Hva", "Hvem", "Hvorfor", "Når"] },
-  { id: 8, level: 1, theme: "basico", blank: "___ er det?", answer: "Hvem", pt: "Quem é?", options: ["Hvem", "Hva", "Hvor", "Når", "Hvordan"] },
-  { id: 9, level: 1, theme: "basico", blank: "___ kommer toget?", answer: "Når", pt: "Quando chega o comboio?", options: ["Når", "Hvor", "Hvem", "Hva", "Hvordan"] },
-  { id: 10, level: 1, theme: "basico", blank: "___ har du det i dag?", answer: "Hvordan", pt: "Como estás hoje?", options: ["Hvordan", "Hvorfor", "Hva", "Hvem", "Når"] },
-  { id: 11, level: 3, theme: "basico", blank: "Jeg ___ til Norge om seks måneder.", answer: "flytter", pt: "Eu mudo-me para a Noruega daqui a seis meses.", options: ["flytter", "bor", "jobber", "snakker", "heter"] },
-  { id: 12, level: 3, theme: "basico", blank: "Hun ___ norsk hver dag.", answer: "øver", pt: "Ela pratica norueguês todos os dias.", options: ["øver", "spiser", "sover", "kjører", "leser"] },
+  { id: 1, level: 1, theme: "basico", blank: "___ heter David.", answer: "Jeg", pt: "Eu chamo-me David.", fon: "Iei iéter Dávid.", options: ["Jeg", "Du", "Han", "Vi", "Dere"] },
+  { id: 2, level: 1, theme: "basico", blank: "___ bor i Bergen.", answer: "Hun", pt: "Ela mora em Bergen.", fon: "Hün bur i Bérguen.", options: ["Hun", "Jeg", "De", "Dere", "Vi"] },
+  { id: 3, level: 1, theme: "basico", blank: "___ er lærer.", answer: "Han", pt: "Ele é professor.", fon: "Han ér lérer.", options: ["Han", "Hun", "Jeg", "Vi", "De"] },
+  { id: 4, level: 1, theme: "basico", blank: "___ snakker norsk.", answer: "Vi", pt: "Nós falamos norueguês.", fon: "Vi snáquer norrsk.", options: ["Vi", "Dere", "De", "Jeg", "Du"] },
+  { id: 5, level: 1, theme: "basico", blank: "___ er fra Portugal.", answer: "Dere", pt: "Vocês são de Portugal.", fon: "Dêre ér frá Purtugál.", options: ["Dere", "Vi", "De", "Han", "Hun"] },
+  { id: 6, level: 1, theme: "basico", blank: "___ heter du?", answer: "Hva", pt: "Como te chamas?", fon: "Vá iéter dü?", options: ["Hva", "Hvor", "Hvem", "Når", "Hvordan"] },
+  { id: 7, level: 1, theme: "basico", blank: "___ er du fra?", answer: "Hvor", pt: "De onde és?", fon: "Vur ér dü frá?", options: ["Hvor", "Hva", "Hvem", "Hvorfor", "Når"] },
+  { id: 8, level: 1, theme: "basico", blank: "___ er det?", answer: "Hvem", pt: "Quem é?", fon: "Vém ér dé?", options: ["Hvem", "Hva", "Hvor", "Når", "Hvordan"] },
+  { id: 9, level: 1, theme: "basico", blank: "___ kommer toget?", answer: "Når", pt: "Quando chega o comboio?", fon: "Nór cómer tóguet?", options: ["Når", "Hvor", "Hvem", "Hva", "Hvordan"] },
+  { id: 10, level: 1, theme: "basico", blank: "___ har du det i dag?", answer: "Hvordan", pt: "Como estás hoje?", fon: "Vúrdan hár dü dé i dág?", options: ["Hvordan", "Hvorfor", "Hva", "Hvem", "Når"] },
+  { id: 11, level: 3, theme: "basico", blank: "Jeg ___ til Norge om seks måneder.", answer: "flytter", pt: "Eu mudo-me para a Noruega daqui a seis meses.", fon: "Iei flütter til Nórgue om secs móneder.", options: ["flytter", "bor", "jobber", "snakker", "heter"] },
+  { id: 12, level: 3, theme: "basico", blank: "Hun ___ norsk hver dag.", answer: "øver", pt: "Ela pratica norueguês todos os dias.", fon: "Hün över norrsk vér dág.", options: ["øver", "spiser", "sover", "kjører", "leser"] },
 
   // ---- Tema: cumprimentos ----
-  { id: 20, level: 1, theme: "cumprimentos", blank: "Hei, jeg ___ Pedro.", answer: "heter", pt: "Olá, chamo-me Pedro.", options: ["heter", "er", "har", "bor", "jobber"] },
-  { id: 21, level: 1, theme: "cumprimentos", blank: "Jeg kommer ___ Portugal.", answer: "fra", pt: "Eu venho de Portugal.", options: ["fra", "til", "i", "på", "med"] },
-  { id: 22, level: 1, theme: "cumprimentos", blank: "Hyggelig å ___ deg.", answer: "møte", pt: "Prazer em conhecer-te.", options: ["møte", "se", "høre", "snakke", "vite"] },
-  { id: 23, level: 1, theme: "cumprimentos", blank: "Ha en fin ___!", answer: "dag", pt: "Tem um bom dia!", options: ["dag", "kveld", "uke", "jobb", "tur"] },
-  { id: 24, level: 1, theme: "cumprimentos", blank: "Vi ___!", answer: "sees", pt: "Até à vista!", options: ["sees", "snakkes", "møtes", "ringer", "går"] },
-  { id: 25, level: 1, theme: "cumprimentos", blank: "___, takk.", answer: "Ja", pt: "Sim, por favor.", options: ["Ja", "Nei", "Kanskje", "Takk", "Vær"] },
-  { id: 26, level: 1, theme: "cumprimentos", blank: "Unnskyld, jeg ___ ikke norsk så godt ennå.", answer: "kan", pt: "Desculpa, ainda não sei bem norueguês.", options: ["kan", "vil", "skal", "må", "har"] },
+  { id: 20, level: 1, theme: "cumprimentos", blank: "Hei, jeg ___ Pedro.", answer: "heter", pt: "Olá, chamo-me Pedro.", fon: "Hei, iei iéter Pédru.", options: ["heter", "er", "har", "bor", "jobber"] },
+  { id: 21, level: 1, theme: "cumprimentos", blank: "Jeg kommer ___ Portugal.", answer: "fra", pt: "Eu venho de Portugal.", fon: "Iei cómer frá Purtugál.", options: ["fra", "til", "i", "på", "med"] },
+  { id: 22, level: 1, theme: "cumprimentos", blank: "Hyggelig å ___ deg.", answer: "møte", pt: "Prazer em conhecer-te.", fon: "Hüguêli o mötə dei.", options: ["møte", "se", "høre", "snakke", "vite"] },
+  { id: 23, level: 1, theme: "cumprimentos", blank: "Ha en fin ___!", answer: "dag", pt: "Tem um bom dia!", fon: "Ha en fin dág!", options: ["dag", "kveld", "uke", "jobb", "tur"] },
+  { id: 24, level: 1, theme: "cumprimentos", blank: "Vi ___!", answer: "sees", pt: "Até à vista!", fon: "Vi sé-es!", options: ["sees", "snakkes", "møtes", "ringer", "går"] },
+  { id: 25, level: 1, theme: "cumprimentos", blank: "___, takk.", answer: "Ja", pt: "Sim, por favor.", fon: "Iá, tak.", options: ["Ja", "Nei", "Kanskje", "Takk", "Vær"] },
+  { id: 26, level: 1, theme: "cumprimentos", blank: "Unnskyld, jeg ___ ikke norsk så godt ennå.", answer: "kan", pt: "Desculpa, ainda não sei bem norueguês.", fon: "Ünnshüll, iei kan icke norrsk so gót ennó.", options: ["kan", "vil", "skal", "må", "har"] },
 
   // ---- Tema: números ----
-  { id: 30, level: 1, theme: "numeros", blank: "Jeg har ___ barn.", answer: "to", pt: "Tenho dois filhos.", options: ["to", "tre", "en", "fire", "fem"] },
-  { id: 31, level: 1, theme: "numeros", blank: "Klokka er ___.", answer: "sju", pt: "São sete horas.", options: ["sju", "åtte", "seks", "ni", "fem"] },
-  { id: 32, level: 1, theme: "numeros", blank: "Jeg jobber ___ timer i dag.", answer: "åtte", pt: "Trabalho oito horas hoje.", options: ["åtte", "sju", "ni", "ti", "seks"] },
-  { id: 33, level: 1, theme: "numeros", blank: "Det koster ___ kroner.", answer: "hundre", pt: "Custa cem coroas.", options: ["hundre", "ti", "tjue", "tusen", "femti"] },
-  { id: 34, level: 1, theme: "numeros", blank: "Vi trenger ___ kabler.", answer: "tre", pt: "Precisamos de três cabos.", options: ["tre", "to", "fire", "fem", "en"] },
-  { id: 35, level: 1, theme: "numeros", blank: "Møtet er klokka ___.", answer: "ni", pt: "A reunião é às nove.", options: ["ni", "åtte", "ti", "sju", "tolv"] },
-  { id: 36, level: 1, theme: "numeros", blank: "Jeg har jobbet her i ___ år.", answer: "fem", pt: "Trabalho aqui há cinco anos.", options: ["fem", "fire", "seks", "tre", "ti"] },
+  { id: 30, level: 1, theme: "numeros", blank: "Jeg har ___ barn.", answer: "to", pt: "Tenho dois filhos.", fon: "Iei har tu barn.", options: ["to", "tre", "en", "fire", "fem"] },
+  { id: 31, level: 1, theme: "numeros", blank: "Klokka er ___.", answer: "sju", pt: "São sete horas.", fon: "Clóca ér chü.", options: ["sju", "åtte", "seks", "ni", "fem"] },
+  { id: 32, level: 1, theme: "numeros", blank: "Jeg jobber ___ timer i dag.", answer: "åtte", pt: "Trabalho oito horas hoje.", fon: "Iei ióbber ótə tímer i dág.", options: ["åtte", "sju", "ni", "ti", "seks"] },
+  { id: 33, level: 1, theme: "numeros", blank: "Det koster ___ kroner.", answer: "hundre", pt: "Custa cem coroas.", fon: "Dé cóster hündrə crúner.", options: ["hundre", "ti", "tjue", "tusen", "femti"] },
+  { id: 34, level: 1, theme: "numeros", blank: "Vi trenger ___ kabler.", answer: "tre", pt: "Precisamos de três cabos.", fon: "Vi trénguer tré cáblər.", options: ["tre", "to", "fire", "fem", "en"] },
+  { id: 35, level: 1, theme: "numeros", blank: "Møtet er klokka ___.", answer: "ni", pt: "A reunião é às nove.", fon: "Mötə ér clóca ni.", options: ["ni", "åtte", "ti", "sju", "tolv"] },
+  { id: 36, level: 1, theme: "numeros", blank: "Jeg har jobbet her i ___ år.", answer: "fem", pt: "Trabalho aqui há cinco anos.", fon: "Iei har iobbə hér i fem ór.", options: ["fem", "fire", "seks", "tre", "ti"] },
 
   // ---- Tema: restaurante ----
-  { id: 40, level: 1, theme: "restaurante", blank: "Kan jeg få ___, takk?", answer: "menyen", pt: "Posso ter o menu, por favor?", options: ["menyen", "regningen", "vannet", "brødet", "kaffen"] },
-  { id: 41, level: 1, theme: "restaurante", blank: "Jeg vil gjerne ___ en pizza.", answer: "bestille", pt: "Gostava de pedir uma pizza.", options: ["bestille", "spise", "lage", "kjøpe", "betale"] },
-  { id: 42, level: 1, theme: "restaurante", blank: "Kan jeg få ___, takk?", answer: "regningen", pt: "Posso ter a conta, por favor?", options: ["regningen", "menyen", "glasset", "gaffelen", "stolen"] },
-  { id: 43, level: 1, theme: "restaurante", blank: "Vannet er ___.", answer: "gratis", pt: "A água é grátis.", options: ["gratis", "dyrt", "varmt", "kaldt", "søtt"] },
-  { id: 44, level: 1, theme: "restaurante", blank: "Det smaker ___!", answer: "godt", pt: "Sabe bem!", options: ["godt", "dårlig", "søtt", "surt", "salt"] },
-  { id: 45, level: 1, theme: "restaurante", blank: "Jeg er ___.", answer: "sulten", pt: "Tenho fome.", options: ["sulten", "tørst", "mett", "trøtt", "glad"] },
-  { id: 46, level: 1, theme: "restaurante", blank: "Har dere bord til ___?", answer: "to", pt: "Têm mesa para dois?", options: ["to", "tre", "en", "fire", "fem"] },
+  { id: 40, level: 1, theme: "restaurante", blank: "Kan jeg få ___, takk?", answer: "menyen", pt: "Posso ter o menu, por favor?", fon: "Kan iei fó menüen, tak?", options: ["menyen", "regningen", "vannet", "brødet", "kaffen"] },
+  { id: 41, level: 1, theme: "restaurante", blank: "Jeg vil gjerne ___ en pizza.", answer: "bestille", pt: "Gostava de pedir uma pizza.", fon: "Iei vil iérnə bestíllə en pítsa.", options: ["bestille", "spise", "lage", "kjøpe", "betale"] },
+  { id: 42, level: 1, theme: "restaurante", blank: "Kan jeg få ___, takk?", answer: "regningen", pt: "Posso ter a conta, por favor?", fon: "Kan iei fó régninguen, tak?", options: ["regningen", "menyen", "glasset", "gaffelen", "stolen"] },
+  { id: 43, level: 1, theme: "restaurante", blank: "Vannet er ___.", answer: "gratis", pt: "A água é grátis.", fon: "Vannə ér grátis.", options: ["gratis", "dyrt", "varmt", "kaldt", "søtt"] },
+  { id: 44, level: 1, theme: "restaurante", blank: "Det smaker ___!", answer: "godt", pt: "Sabe bem!", fon: "Dé smáker gót!", options: ["godt", "dårlig", "søtt", "surt", "salt"] },
+  { id: 45, level: 1, theme: "restaurante", blank: "Jeg er ___.", answer: "sulten", pt: "Tenho fome.", fon: "Iei ér sültən.", options: ["sulten", "tørst", "mett", "trøtt", "glad"] },
+  { id: 46, level: 1, theme: "restaurante", blank: "Har dere bord til ___?", answer: "to", pt: "Têm mesa para dois?", fon: "Har dérə bur til tu?", options: ["to", "tre", "en", "fire", "fem"] },
 
   // ---- Tema: trabalho (eletricista / indústria) ----
-  { id: 50, level: 1, theme: "trabalho", blank: "Jeg er ___.", answer: "elektriker", pt: "Eu sou eletricista.", options: ["elektriker", "lærer", "kokk", "sjåfør", "snekker"] },
-  { id: 51, level: 1, theme: "trabalho", blank: "Jeg ___ jobb i Norge.", answer: "søker", pt: "Procuro trabalho na Noruega.", options: ["søker", "har", "liker", "lager", "selger"] },
-  { id: 52, level: 1, theme: "trabalho", blank: "Husk å bruke ___.", answer: "hansker", pt: "Lembra-te de usar luvas.", options: ["hansker", "sko", "hjelm", "briller", "jakke"] },
-  { id: 53, level: 1, theme: "trabalho", blank: "Strømmen er ___.", answer: "av", pt: "A eletricidade está desligada.", options: ["av", "på", "varm", "kald", "ny"] },
-  { id: 54, level: 1, theme: "trabalho", blank: "Kan du sjekke ___?", answer: "sikringen", pt: "Podes verificar o fusível?", options: ["sikringen", "lyset", "kabelen", "målet", "planen"] },
-  { id: 55, level: 1, theme: "trabalho", blank: "Jeg trenger flere ___.", answer: "verktøy", pt: "Preciso de mais ferramentas.", options: ["verktøy", "penger", "tid", "hjelp", "papir"] },
-  { id: 56, level: 1, theme: "trabalho", blank: "Skiftet begynner klokka ___.", answer: "sju", pt: "O turno começa às sete.", options: ["sju", "åtte", "seks", "ni", "ti"] },
-  { id: 57, level: 1, theme: "trabalho", blank: "Vær ___ med strøm!", answer: "forsiktig", pt: "Tem cuidado com a eletricidade!", options: ["forsiktig", "rask", "sterk", "høy", "stille"] },
+  { id: 50, level: 1, theme: "trabalho", blank: "Jeg er ___.", answer: "elektriker", pt: "Eu sou eletricista.", fon: "Iei ér elétriker.", options: ["elektriker", "lærer", "kokk", "sjåfør", "snekker"] },
+  { id: 51, level: 1, theme: "trabalho", blank: "Jeg ___ jobb i Norge.", answer: "søker", pt: "Procuro trabalho na Noruega.", fon: "Iei sö-ker iobb i nórgue.", options: ["søker", "har", "liker", "lager", "selger"] },
+  { id: 52, level: 1, theme: "trabalho", blank: "Husk å bruke ___.", answer: "hansker", pt: "Lembra-te de usar luvas.", fon: "Húsk o brúke hánsker.", options: ["hansker", "sko", "hjelm", "briller", "jakke"] },
+  { id: 53, level: 1, theme: "trabalho", blank: "Strømmen er ___.", answer: "av", pt: "A eletricidade está desligada.", fon: "Strömmen ér av.", options: ["av", "på", "varm", "kald", "ny"] },
+  { id: 54, level: 1, theme: "trabalho", blank: "Kan du sjekke ___?", answer: "sikringen", pt: "Podes verificar o fusível?", fon: "Kan dü chékke síkringuen?", options: ["sikringen", "lyset", "kabelen", "målet", "planen"] },
+  { id: 55, level: 1, theme: "trabalho", blank: "Jeg trenger flere ___.", answer: "verktøy", pt: "Preciso de mais ferramentas.", fon: "Iei trénguer fléerə vérktöi.", options: ["verktøy", "penger", "tid", "hjelp", "papir"] },
+  { id: 56, level: 1, theme: "trabalho", blank: "Skiftet begynner klokka ___.", answer: "sju", pt: "O turno começa às sete.", fon: "Chíftə be-iünner clóca chü.", options: ["sju", "åtte", "seks", "ni", "ti"] },
+  { id: 57, level: 1, theme: "trabalho", blank: "Vær ___ med strøm!", answer: "forsiktig", pt: "Tem cuidado com a eletricidade!", fon: "Vér forchíkti me ström!", options: ["forsiktig", "rask", "sterk", "høy", "stille"] },
 ];
 
 const THEMES = [
@@ -355,6 +374,13 @@ function optionsFor(item) {
 }
 
 // ---------- Speech ----------
+const RATE_KEY = "norsk-puls-rate";
+function loadRate() {
+  try { const raw = localStorage.getItem(RATE_KEY); return raw ? parseFloat(raw) : 0.9; } catch { return 0.9; }
+}
+function saveRate(r) { try { localStorage.setItem(RATE_KEY, String(r)); } catch {} }
+let speechRate = loadRate();
+
 function speak(text, onError) {
   if (!window.speechSynthesis) { onError && onError("A síntese de voz não é suportada neste navegador."); return; }
   const doSpeak = () => {
@@ -363,7 +389,7 @@ function speak(text, onError) {
     const voices = window.speechSynthesis.getVoices();
     const noVoice = voices.find(v => v.lang && (v.lang.toLowerCase().startsWith("nb") || v.lang.toLowerCase().startsWith("no")));
     if (noVoice) utter.voice = noVoice;
-    utter.rate = 0.9;
+    utter.rate = speechRate;
     utter.onerror = () => onError && onError("Não foi possível reproduzir o áudio.");
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
@@ -389,7 +415,7 @@ function getRecognition() {
 let currentTab = "practice";
 let currentTheme = "basico";
 let practiceIdx = 0, exerciseIdx = 0, exerciseScore = { correct: 0, total: 0 }, exerciseOptions = null;
-let listening = false, heard = "", result = null, micError = "";
+let listening = false, heard = "", result = null, micError = "", showPhonetic = false;
 let recInstance = null;
 let exSelected = null;
 let testState = { running: false, set: [], idx: 0, selected: null, tally: 0, finished: false, lastScore: null };
@@ -406,7 +432,7 @@ function renderThemeTabs() {
     b.onclick = () => {
       if (b.dataset.theme === currentTheme) return;
       currentTheme = b.dataset.theme;
-      practiceIdx = 0; heard = ""; result = null; micError = ""; listening = false;
+      practiceIdx = 0; heard = ""; result = null; micError = ""; listening = false; showPhonetic = false;
       exerciseIdx = 0; exSelected = null; exerciseOptions = null; exerciseScore = { correct: 0, total: 0 };
       testState = { running: false, set: [], idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
       render();
@@ -465,11 +491,19 @@ function renderPractice() {
       <p class="card-label mono">frase ${practiceIdx + 1} de ${p.length}</p>
       <p class="sentence display">${target}</p>
       <p class="translation">${item.pt}</p>
+      <button class="btn phon-toggle" id="btnTogglePhon" style="margin-bottom:16px">${showPhonetic ? "🙈 Esconder pronúncia" : "👁️ Ver pronúncia (aproximada)"}</button>
+      ${showPhonetic ? `<p class="mono" style="color:var(--muted);font-size:13px;margin:-8px 0 16px">${item.fon || "Ainda não há guia de pronúncia para este item."}</p>` : ""}
       <div class="btn-row">
         <button class="btn listen" id="btnOuvir">🔊 Ouvir</button>
         ${supported
           ? `<button class="btn ${listening ? "listening" : ""}" id="btnFalar">🎙️ ${listening ? "A ouvir... (toca para parar)" : "Falar"}</button>`
           : `<span class="error-text">reconhecimento de voz não suportado neste navegador</span>`}
+      </div>
+      <div class="speed-row">
+        <span class="speed-label">velocidade:</span>
+        <button class="speed-btn ${speechRate <= 0.65 ? "active" : ""}" data-rate="0.6">🐢 lenta</button>
+        <button class="speed-btn ${speechRate > 0.65 && speechRate <= 0.95 ? "active" : ""}" data-rate="0.9">🚶 normal</button>
+        <button class="speed-btn ${speechRate > 0.95 ? "active" : ""}" data-rate="1.1">🏃 rápida</button>
       </div>
       ${micError ? `<p class="error-text">${micError}</p>` : ""}
       ${heardBlock}
@@ -574,14 +608,23 @@ function attachHandlers() {
     if (btnFalar) btnFalar.onclick = () => { listening ? stopListening() : startListening(); };
     const btnNext = document.getElementById("btnNext");
     if (btnNext) btnNext.onclick = () => {
-      practiceIdx++; heard = ""; result = null; micError = "";
+      practiceIdx++; heard = ""; result = null; micError = ""; showPhonetic = false;
       render();
     };
     const btnRestartPractice = document.getElementById("btnRestartPractice");
     if (btnRestartPractice) btnRestartPractice.onclick = () => {
-      practiceIdx = 0; heard = ""; result = null; micError = "";
+      practiceIdx = 0; heard = ""; result = null; micError = ""; showPhonetic = false;
       render();
     };
+    const btnTogglePhon = document.getElementById("btnTogglePhon");
+    if (btnTogglePhon) btnTogglePhon.onclick = () => { showPhonetic = !showPhonetic; render(); };
+    document.querySelectorAll(".speed-btn").forEach(b => {
+      b.onclick = () => {
+        speechRate = parseFloat(b.dataset.rate);
+        saveRate(speechRate);
+        render();
+      };
+    });
   }
   if (currentTab === "exercises") {
     document.querySelectorAll(".options .opt-btn").forEach(b => {
@@ -664,7 +707,7 @@ function attachHandlers() {
       const okEl = document.getElementById("importSuccess");
       errEl.style.display = "none";
       okEl.style.display = "none";
-      const lines = box.value.split("\n").map(l => l.trim()).filter(Boolean);
+      const lines = box.value.split("\n").map(l => l.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
       if (!lines.length) {
         errEl.textContent = "Cola pelo menos uma linha no formato indicado.";
         errEl.style.display = "block";
@@ -672,7 +715,7 @@ function attachHandlers() {
       }
       let added = 0, skipped = 0, lastTheme = null;
       lines.forEach((line, i) => {
-        const parts = line.split("|").map(p => p.trim());
+        const parts = line.split("|").map(p => p.trim().replace(/^["']|["']$/g, ""));
         if (parts.length < 4) { skipped++; return; }
         let [sentence, answer, pt, theme] = parts;
         if (!answer || !pt || !theme) { skipped++; return; }
