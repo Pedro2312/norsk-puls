@@ -57,6 +57,15 @@
     border-bottom: 1px solid var(--border);
     padding-bottom: 12px;
   }
+  #themeTabs {
+    margin: 20px 0 0;
+    border-bottom: none;
+    padding-bottom: 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  #themeTabs .tab-btn { flex-shrink: 0; }
   .tab-btn {
     display: flex;
     align-items: center;
@@ -122,6 +131,39 @@
   .feedback-text { font-size: 12px; color: var(--muted); margin-top: 12px; }
   .note { font-size: 12px; color: var(--muted2); margin-top: 16px; line-height: 1.5; }
 
+  .field-label { display: block; font-size: 12px; color: var(--muted); margin: 16px 0 6px; }
+  .field-label:first-of-type { margin-top: 0; }
+  .text-input {
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: var(--bg);
+    color: var(--text);
+  }
+  .text-input:focus { outline: none; border-color: var(--violet); }
+  select.text-input { -webkit-appearance: none; appearance: none; }
+  .custom-item-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .custom-item-row:last-child { border-bottom: none; }
+  .del-btn {
+    background: none;
+    border: none;
+    font-size: 15px;
+    cursor: pointer;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .del-btn:hover { opacity: 1; }
+
   .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
   .opt-btn {
     display: flex;
@@ -152,10 +194,13 @@
   </div>
   <p class="subtitle">Português → Norueguês, com foco na pronúncia</p>
 
-  <div class="tabs">
+  <div class="tabs" id="themeTabs"></div>
+
+  <div class="tabs" id="mainTabs">
     <button class="tab-btn active" data-tab="practice">🎙️ Praticar</button>
     <button class="tab-btn" data-tab="exercises">📘 Exercícios</button>
-    <button class="tab-btn" data-tab="test">🏆 Teste semanal</button>
+    <button class="tab-btn" data-tab="test">🏆 Teste</button>
+    <button class="tab-btn" data-tab="add">➕ Adicionar</button>
   </div>
 
   <div id="content"></div>
@@ -164,18 +209,64 @@
 <script>
 // ---------- Data ----------
 const ITEMS = [
-  { id: 1, level: 1, blank: "___ heter David.", answer: "Jeg", pt: "Eu chamo-me David.", options: ["Jeg", "Du", "Han", "Vi", "Dere"] },
-  { id: 2, level: 1, blank: "___ bor i Bergen.", answer: "Hun", pt: "Ela mora em Bergen.", options: ["Hun", "Jeg", "De", "Dere", "Vi"] },
-  { id: 3, level: 1, blank: "___ er lærer.", answer: "Han", pt: "Ele é professor.", options: ["Han", "Hun", "Jeg", "Vi", "De"] },
-  { id: 4, level: 1, blank: "___ snakker norsk.", answer: "Vi", pt: "Nós falamos norueguês.", options: ["Vi", "Dere", "De", "Jeg", "Du"] },
-  { id: 5, level: 1, blank: "___ er fra Portugal.", answer: "Dere", pt: "Vocês são de Portugal.", options: ["Dere", "Vi", "De", "Han", "Hun"] },
-  { id: 6, level: 2, blank: "___ heter du?", answer: "Hva", pt: "Como te chamas?", options: ["Hva", "Hvor", "Hvem", "Når", "Hvordan"] },
-  { id: 7, level: 2, blank: "___ er du fra?", answer: "Hvor", pt: "De onde és?", options: ["Hvor", "Hva", "Hvem", "Hvorfor", "Når"] },
-  { id: 8, level: 2, blank: "___ er det?", answer: "Hvem", pt: "Quem é?", options: ["Hvem", "Hva", "Hvor", "Når", "Hvordan"] },
-  { id: 9, level: 2, blank: "___ kommer toget?", answer: "Når", pt: "Quando chega o comboio?", options: ["Når", "Hvor", "Hvem", "Hva", "Hvordan"] },
-  { id: 10, level: 2, blank: "___ har du det i dag?", answer: "Hvordan", pt: "Como estás hoje?", options: ["Hvordan", "Hvorfor", "Hva", "Hvem", "Når"] },
-  { id: 11, level: 3, blank: "Jeg ___ til Norge om seks måneder.", answer: "flytter", pt: "Eu mudo-me para a Noruega daqui a seis meses.", options: ["flytter", "bor", "jobber", "snakker", "heter"] },
-  { id: 12, level: 3, blank: "Hun ___ norsk hver dag.", answer: "øver", pt: "Ela pratica norueguês todos os dias.", options: ["øver", "spiser", "sover", "kjører", "leser"] },
+  // ---- Tema: básico (pronomes e perguntas) ----
+  { id: 1, level: 1, theme: "basico", blank: "___ heter David.", answer: "Jeg", pt: "Eu chamo-me David.", options: ["Jeg", "Du", "Han", "Vi", "Dere"] },
+  { id: 2, level: 1, theme: "basico", blank: "___ bor i Bergen.", answer: "Hun", pt: "Ela mora em Bergen.", options: ["Hun", "Jeg", "De", "Dere", "Vi"] },
+  { id: 3, level: 1, theme: "basico", blank: "___ er lærer.", answer: "Han", pt: "Ele é professor.", options: ["Han", "Hun", "Jeg", "Vi", "De"] },
+  { id: 4, level: 1, theme: "basico", blank: "___ snakker norsk.", answer: "Vi", pt: "Nós falamos norueguês.", options: ["Vi", "Dere", "De", "Jeg", "Du"] },
+  { id: 5, level: 1, theme: "basico", blank: "___ er fra Portugal.", answer: "Dere", pt: "Vocês são de Portugal.", options: ["Dere", "Vi", "De", "Han", "Hun"] },
+  { id: 6, level: 1, theme: "basico", blank: "___ heter du?", answer: "Hva", pt: "Como te chamas?", options: ["Hva", "Hvor", "Hvem", "Når", "Hvordan"] },
+  { id: 7, level: 1, theme: "basico", blank: "___ er du fra?", answer: "Hvor", pt: "De onde és?", options: ["Hvor", "Hva", "Hvem", "Hvorfor", "Når"] },
+  { id: 8, level: 1, theme: "basico", blank: "___ er det?", answer: "Hvem", pt: "Quem é?", options: ["Hvem", "Hva", "Hvor", "Når", "Hvordan"] },
+  { id: 9, level: 1, theme: "basico", blank: "___ kommer toget?", answer: "Når", pt: "Quando chega o comboio?", options: ["Når", "Hvor", "Hvem", "Hva", "Hvordan"] },
+  { id: 10, level: 1, theme: "basico", blank: "___ har du det i dag?", answer: "Hvordan", pt: "Como estás hoje?", options: ["Hvordan", "Hvorfor", "Hva", "Hvem", "Når"] },
+  { id: 11, level: 3, theme: "basico", blank: "Jeg ___ til Norge om seks måneder.", answer: "flytter", pt: "Eu mudo-me para a Noruega daqui a seis meses.", options: ["flytter", "bor", "jobber", "snakker", "heter"] },
+  { id: 12, level: 3, theme: "basico", blank: "Hun ___ norsk hver dag.", answer: "øver", pt: "Ela pratica norueguês todos os dias.", options: ["øver", "spiser", "sover", "kjører", "leser"] },
+
+  // ---- Tema: cumprimentos ----
+  { id: 20, level: 1, theme: "cumprimentos", blank: "Hei, jeg ___ Pedro.", answer: "heter", pt: "Olá, chamo-me Pedro.", options: ["heter", "er", "har", "bor", "jobber"] },
+  { id: 21, level: 1, theme: "cumprimentos", blank: "Jeg kommer ___ Portugal.", answer: "fra", pt: "Eu venho de Portugal.", options: ["fra", "til", "i", "på", "med"] },
+  { id: 22, level: 1, theme: "cumprimentos", blank: "Hyggelig å ___ deg.", answer: "møte", pt: "Prazer em conhecer-te.", options: ["møte", "se", "høre", "snakke", "vite"] },
+  { id: 23, level: 1, theme: "cumprimentos", blank: "Ha en fin ___!", answer: "dag", pt: "Tem um bom dia!", options: ["dag", "kveld", "uke", "jobb", "tur"] },
+  { id: 24, level: 1, theme: "cumprimentos", blank: "Vi ___!", answer: "sees", pt: "Até à vista!", options: ["sees", "snakkes", "møtes", "ringer", "går"] },
+  { id: 25, level: 1, theme: "cumprimentos", blank: "___, takk.", answer: "Ja", pt: "Sim, por favor.", options: ["Ja", "Nei", "Kanskje", "Takk", "Vær"] },
+  { id: 26, level: 1, theme: "cumprimentos", blank: "Unnskyld, jeg ___ ikke norsk så godt ennå.", answer: "kan", pt: "Desculpa, ainda não sei bem norueguês.", options: ["kan", "vil", "skal", "må", "har"] },
+
+  // ---- Tema: números ----
+  { id: 30, level: 1, theme: "numeros", blank: "Jeg har ___ barn.", answer: "to", pt: "Tenho dois filhos.", options: ["to", "tre", "en", "fire", "fem"] },
+  { id: 31, level: 1, theme: "numeros", blank: "Klokka er ___.", answer: "sju", pt: "São sete horas.", options: ["sju", "åtte", "seks", "ni", "fem"] },
+  { id: 32, level: 1, theme: "numeros", blank: "Jeg jobber ___ timer i dag.", answer: "åtte", pt: "Trabalho oito horas hoje.", options: ["åtte", "sju", "ni", "ti", "seks"] },
+  { id: 33, level: 1, theme: "numeros", blank: "Det koster ___ kroner.", answer: "hundre", pt: "Custa cem coroas.", options: ["hundre", "ti", "tjue", "tusen", "femti"] },
+  { id: 34, level: 1, theme: "numeros", blank: "Vi trenger ___ kabler.", answer: "tre", pt: "Precisamos de três cabos.", options: ["tre", "to", "fire", "fem", "en"] },
+  { id: 35, level: 1, theme: "numeros", blank: "Møtet er klokka ___.", answer: "ni", pt: "A reunião é às nove.", options: ["ni", "åtte", "ti", "sju", "tolv"] },
+  { id: 36, level: 1, theme: "numeros", blank: "Jeg har jobbet her i ___ år.", answer: "fem", pt: "Trabalho aqui há cinco anos.", options: ["fem", "fire", "seks", "tre", "ti"] },
+
+  // ---- Tema: restaurante ----
+  { id: 40, level: 1, theme: "restaurante", blank: "Kan jeg få ___, takk?", answer: "menyen", pt: "Posso ter o menu, por favor?", options: ["menyen", "regningen", "vannet", "brødet", "kaffen"] },
+  { id: 41, level: 1, theme: "restaurante", blank: "Jeg vil gjerne ___ en pizza.", answer: "bestille", pt: "Gostava de pedir uma pizza.", options: ["bestille", "spise", "lage", "kjøpe", "betale"] },
+  { id: 42, level: 1, theme: "restaurante", blank: "Kan jeg få ___, takk?", answer: "regningen", pt: "Posso ter a conta, por favor?", options: ["regningen", "menyen", "glasset", "gaffelen", "stolen"] },
+  { id: 43, level: 1, theme: "restaurante", blank: "Vannet er ___.", answer: "gratis", pt: "A água é grátis.", options: ["gratis", "dyrt", "varmt", "kaldt", "søtt"] },
+  { id: 44, level: 1, theme: "restaurante", blank: "Det smaker ___!", answer: "godt", pt: "Sabe bem!", options: ["godt", "dårlig", "søtt", "surt", "salt"] },
+  { id: 45, level: 1, theme: "restaurante", blank: "Jeg er ___.", answer: "sulten", pt: "Tenho fome.", options: ["sulten", "tørst", "mett", "trøtt", "glad"] },
+  { id: 46, level: 1, theme: "restaurante", blank: "Har dere bord til ___?", answer: "to", pt: "Têm mesa para dois?", options: ["to", "tre", "en", "fire", "fem"] },
+
+  // ---- Tema: trabalho (eletricista / indústria) ----
+  { id: 50, level: 1, theme: "trabalho", blank: "Jeg er ___.", answer: "elektriker", pt: "Eu sou eletricista.", options: ["elektriker", "lærer", "kokk", "sjåfør", "snekker"] },
+  { id: 51, level: 1, theme: "trabalho", blank: "Jeg ___ jobb i Norge.", answer: "søker", pt: "Procuro trabalho na Noruega.", options: ["søker", "har", "liker", "lager", "selger"] },
+  { id: 52, level: 1, theme: "trabalho", blank: "Husk å bruke ___.", answer: "hansker", pt: "Lembra-te de usar luvas.", options: ["hansker", "sko", "hjelm", "briller", "jakke"] },
+  { id: 53, level: 1, theme: "trabalho", blank: "Strømmen er ___.", answer: "av", pt: "A eletricidade está desligada.", options: ["av", "på", "varm", "kald", "ny"] },
+  { id: 54, level: 1, theme: "trabalho", blank: "Kan du sjekke ___?", answer: "sikringen", pt: "Podes verificar o fusível?", options: ["sikringen", "lyset", "kabelen", "målet", "planen"] },
+  { id: 55, level: 1, theme: "trabalho", blank: "Jeg trenger flere ___.", answer: "verktøy", pt: "Preciso de mais ferramentas.", options: ["verktøy", "penger", "tid", "hjelp", "papir"] },
+  { id: 56, level: 1, theme: "trabalho", blank: "Skiftet begynner klokka ___.", answer: "sju", pt: "O turno começa às sete.", options: ["sju", "åtte", "seks", "ni", "ti"] },
+  { id: 57, level: 1, theme: "trabalho", blank: "Vær ___ med strøm!", answer: "forsiktig", pt: "Tem cuidado com a eletricidade!", options: ["forsiktig", "rask", "sterk", "høy", "stille"] },
+];
+
+const THEMES = [
+  { id: "basico", label: "🗣️ Básico" },
+  { id: "cumprimentos", label: "👋 Cumprimentos" },
+  { id: "numeros", label: "🔢 Números" },
+  { id: "restaurante", label: "🍽️ Restaurante" },
+  { id: "trabalho", label: "🔧 Trabalho" },
 ];
 const fullSentence = (item) => item.blank.replace("___", item.answer);
 
@@ -211,6 +302,7 @@ function compareSentences(target, heard) {
 
 // ---------- Storage (localStorage — this runs as a standalone file, not a Claude artifact) ----------
 const STORAGE_KEY = "norsk-puls-progress";
+const CUSTOM_KEY = "norsk-puls-custom";
 function loadProgress() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -220,7 +312,47 @@ function loadProgress() {
 function saveProgress(p) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
 }
+function loadCustom() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+function saveCustom(items) {
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(items)); } catch {}
+}
 let progress = loadProgress();
+let customItems = loadCustom();
+
+function allItems() { return ITEMS.concat(customItems); }
+
+function getThemes() {
+  const builtinIds = THEMES.map(t => t.id);
+  const customThemeIds = [...new Set(customItems.map(i => i.theme))].filter(id => !builtinIds.includes(id));
+  const customThemes = customThemeIds.map(id => ({ id, label: "✨ " + id.charAt(0).toUpperCase() + id.slice(1) }));
+  return THEMES.concat(customThemes);
+}
+
+// Builds multiple-choice options for an item. Built-in items already ship with
+// curated distractors; custom items only have an answer, so we auto-generate
+// plausible wrong answers by sampling other answers from the same theme.
+function optionsFor(item) {
+  if (item.options && item.options.length >= 2) return shuffle(item.options);
+  const others = allItems().filter(i => i.answer.toLowerCase() !== item.answer.toLowerCase());
+  const sameTheme = others.filter(i => i.theme === item.theme);
+  const source = sameTheme.length >= 4 ? sameTheme : others;
+  const seen = new Set([item.answer.toLowerCase()]);
+  const distractors = [];
+  for (const i of shuffle(source)) {
+    const val = i.answer;
+    if (!seen.has(val.toLowerCase())) {
+      seen.add(val.toLowerCase());
+      distractors.push(val);
+    }
+    if (distractors.length >= 4) break;
+  }
+  return shuffle([item.answer, ...distractors]);
+}
 
 // ---------- Speech ----------
 function speak(text, onError) {
@@ -255,28 +387,59 @@ function getRecognition() {
 
 // ---------- State ----------
 let currentTab = "practice";
+let currentTheme = "basico";
 let practiceIdx = 0, exerciseIdx = 0, exerciseScore = { correct: 0, total: 0 }, exerciseOptions = null;
 let listening = false, heard = "", result = null, micError = "";
 let recInstance = null;
 let exSelected = null;
 let testState = { running: false, set: [], idx: 0, selected: null, tally: 0, finished: false, lastScore: null };
 
-function pool() { return ITEMS.filter(i => i.level <= progress.level); }
+function pool() { return allItems().filter(i => i.theme === currentTheme); }
+
+function renderThemeTabs() {
+  const el = document.getElementById("themeTabs");
+  const themes = getThemes();
+  el.innerHTML = themes.map(t =>
+    `<button class="tab-btn ${t.id === currentTheme ? "active" : ""}" data-theme="${t.id}">${t.label}</button>`
+  ).join("");
+  el.querySelectorAll(".tab-btn").forEach(b => {
+    b.onclick = () => {
+      if (b.dataset.theme === currentTheme) return;
+      currentTheme = b.dataset.theme;
+      practiceIdx = 0; heard = ""; result = null; micError = ""; listening = false;
+      exerciseIdx = 0; exSelected = null; exerciseOptions = null; exerciseScore = { correct: 0, total: 0 };
+      testState = { running: false, set: [], idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
+      render();
+    };
+  });
+}
 
 // ---------- Render ----------
 function render() {
   document.getElementById("levelBadge").textContent = `nível ${progress.level} / 3`;
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === currentTab));
+  renderThemeTabs();
+  document.querySelectorAll("#mainTabs .tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === currentTab));
   const el = document.getElementById("content");
   if (currentTab === "practice") el.innerHTML = renderPractice();
   else if (currentTab === "exercises") el.innerHTML = renderExercises();
-  else el.innerHTML = renderTest();
+  else if (currentTab === "test") el.innerHTML = renderTest();
+  else el.innerHTML = renderAdd();
   attachHandlers();
 }
 
 function renderPractice() {
   const p = pool();
-  const item = p[practiceIdx % p.length];
+
+  if (practiceIdx >= p.length) {
+    return `
+      <div class="card center-card">
+        <p class="display" style="font-size:20px;font-weight:600;margin:8px 0">Praticaste todas as ${p.length} frases deste nível! 🎉</p>
+        <p class="translation" style="margin-bottom:24px">Podes repetir para reforçar, ou passar aos exercícios / teste semanal.</p>
+        <button class="btn" id="btnRestartPractice" style="margin:0 auto">↺ Recomeçar</button>
+      </div>`;
+  }
+
+  const item = p[practiceIdx];
   const target = fullSentence(item);
   const supported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -299,7 +462,7 @@ function renderPractice() {
 
   return `
     <div class="card">
-      <p class="card-label mono">frase ${(practiceIdx % p.length) + 1} de ${p.length}</p>
+      <p class="card-label mono">frase ${practiceIdx + 1} de ${p.length}</p>
       <p class="sentence display">${target}</p>
       <p class="translation">${item.pt}</p>
       <div class="btn-row">
@@ -330,7 +493,7 @@ function renderExercises() {
   }
 
   const item = p[exerciseIdx];
-  if (!exerciseOptions) exerciseOptions = shuffle(item.options);
+  if (!exerciseOptions) exerciseOptions = optionsFor(item);
   const optsHtml = exerciseOptions.map(opt => {
     const isCorrect = opt === item.answer;
     const isSelected = opt === exSelected;
@@ -360,7 +523,7 @@ function renderExercises() {
 function renderTest() {
   if (testState.finished) {
     const s = testState.lastScore;
-    const msg = s >= 80 ? "Excelente semana — vamos avançar de nível." : s >= 50 ? "Boa semana — vamos consolidar mais um pouco antes de avançar." : "Sem problema, esta semana fica para reforçar a base. Vamos repetir a matéria.";
+    const msg = s >= 80 ? "Excelente! Já dominas bem esta matéria." : s >= 50 ? "Bom trabalho — vale a pena reforçar mais um pouco." : "Sem problema, ainda estás a começar. Volta à prática e tenta outra vez quando quiseres.";
     return `
       <div class="card center-card">
         <p class="display" style="font-size:28px;font-weight:600;margin:8px 0">${s}%</p>
@@ -371,13 +534,13 @@ function renderTest() {
   if (!testState.running) {
     return `
       <div class="card center-card">
-        <p class="translation">${progress.history.length === 0 ? "Ainda não fizeste nenhum teste." : `Últimos testes: ${progress.history.length}`}</p>
-        <p class="translation" style="margin-bottom:24px">80% ou mais avança-te de nível. Menos de 50% repete a matéria desta semana.</p>
+        <p class="translation">${progress.history.length === 0 ? "Ainda não fizeste nenhum teste." : `Testes feitos: ${progress.history.length}`}</p>
+        <p class="translation" style="margin-bottom:24px">Faz quantos testes quiseres, quando quiseres — é só para veres o teu progresso.</p>
         <button class="btn" id="btnStartTest" style="margin:0 auto">Começar teste →</button>
       </div>`;
   }
   const item = testState.set[testState.idx];
-  if (!testState.currentOptions) testState.currentOptions = shuffle(item.options);
+  if (!testState.currentOptions) testState.currentOptions = optionsFor(item);
   const optsHtml = testState.currentOptions.map(opt => {
     const isCorrect = opt === item.answer;
     const isSelected = opt === testState.selected;
@@ -404,7 +567,7 @@ function attachHandlers() {
   if (currentTab === "practice") {
     const btnOuvir = document.getElementById("btnOuvir");
     if (btnOuvir) btnOuvir.onclick = () => {
-      const p = pool(); const item = p[practiceIdx % p.length];
+      const p = pool(); const item = p[practiceIdx];
       speak(fullSentence(item), (msg) => { micError = msg; render(); });
     };
     const btnFalar = document.getElementById("btnFalar");
@@ -412,6 +575,11 @@ function attachHandlers() {
     const btnNext = document.getElementById("btnNext");
     if (btnNext) btnNext.onclick = () => {
       practiceIdx++; heard = ""; result = null; micError = "";
+      render();
+    };
+    const btnRestartPractice = document.getElementById("btnRestartPractice");
+    if (btnRestartPractice) btnRestartPractice.onclick = () => {
+      practiceIdx = 0; heard = ""; result = null; micError = "";
       render();
     };
   }
@@ -451,6 +619,83 @@ function attachHandlers() {
       else finishTest();
     };
   }
+  if (currentTab === "add") {
+    const themeSelect = document.getElementById("addThemeSelect");
+    const newThemeInput = document.getElementById("addNewTheme");
+    if (themeSelect) themeSelect.onchange = () => {
+      newThemeInput.style.display = themeSelect.value === "__new__" ? "block" : "none";
+    };
+    const btnSubmit = document.getElementById("btnAddSubmit");
+    if (btnSubmit) btnSubmit.onclick = () => {
+      const sentenceEl = document.getElementById("addSentence");
+      const answerEl = document.getElementById("addAnswer");
+      const ptEl = document.getElementById("addPt");
+      const errorEl = document.getElementById("addError");
+      let sentence = sentenceEl.value.trim();
+      const answer = answerEl.value.trim();
+      const pt = ptEl.value.trim();
+      let theme = themeSelect.value;
+      if (theme === "__new__") theme = newThemeInput.value.trim().toLowerCase().replace(/\s+/g, "-");
+
+      if (!answer || !pt || !theme) {
+        errorEl.textContent = "Preenche pelo menos a resposta, a tradução e o tema.";
+        errorEl.style.display = "block";
+        return;
+      }
+      if (!sentence) sentence = "___";
+      else if (!sentence.includes("___")) sentence = sentence + " ___";
+
+      customItems.push({ id: "c-" + Date.now(), level: 1, theme, blank: sentence, answer, pt });
+      saveCustom(customItems);
+      currentTheme = theme;
+      render();
+    };
+    document.querySelectorAll(".del-btn").forEach(b => {
+      b.onclick = () => {
+        customItems = customItems.filter(i => i.id !== b.dataset.id);
+        saveCustom(customItems);
+        render();
+      };
+    });
+    const btnImport = document.getElementById("btnImport");
+    if (btnImport) btnImport.onclick = () => {
+      const box = document.getElementById("importBox");
+      const errEl = document.getElementById("importError");
+      const okEl = document.getElementById("importSuccess");
+      errEl.style.display = "none";
+      okEl.style.display = "none";
+      const lines = box.value.split("\n").map(l => l.trim()).filter(Boolean);
+      if (!lines.length) {
+        errEl.textContent = "Cola pelo menos uma linha no formato indicado.";
+        errEl.style.display = "block";
+        return;
+      }
+      let added = 0, skipped = 0, lastTheme = null;
+      lines.forEach((line, i) => {
+        const parts = line.split("|").map(p => p.trim());
+        if (parts.length < 4) { skipped++; return; }
+        let [sentence, answer, pt, theme] = parts;
+        if (!answer || !pt || !theme) { skipped++; return; }
+        theme = theme.toLowerCase().replace(/\s+/g, "-");
+        if (!sentence) sentence = "___";
+        else if (!sentence.includes("___")) sentence = sentence + " ___";
+        customItems.push({ id: "c-" + Date.now() + "-" + i, level: 1, theme, blank: sentence, answer, pt });
+        added++;
+        lastTheme = theme;
+      });
+      saveCustom(customItems);
+      if (added > 0) {
+        okEl.textContent = `${added} item(ns) importado(s)${skipped ? `, ${skipped} linha(s) ignorada(s) por formato inválido` : ""}.`;
+        okEl.style.display = "block";
+        box.value = "";
+        if (lastTheme) currentTheme = lastTheme;
+        render();
+      } else {
+        errEl.textContent = "Não consegui ler nenhuma linha — confirma que usas o separador \"|\" com 4 partes.";
+        errEl.style.display = "block";
+      }
+    };
+  }
 }
 
 function startListening() {
@@ -474,13 +719,67 @@ function startListening() {
   };
   rec.onend = () => {
     listening = false;
-    const p = pool(); const item = p[practiceIdx % p.length];
+    const p = pool(); const item = p[practiceIdx];
     if (heard) result = compareSentences(fullSentence(item), heard);
     render();
   };
   try { rec.start(); } catch { listening = false; micError = "Não foi possível iniciar o microfone."; render(); }
 }
 function stopListening() { if (recInstance) recInstance.stop(); }
+
+function renderAdd() {
+  const themes = getThemes();
+  const currentThemeLabel = themes.find(t => t.id === currentTheme)?.label || currentTheme;
+  const themeOptionsHtml = themes.map(t =>
+    `<option value="${t.id}" ${t.id === currentTheme ? "selected" : ""}>${t.label}</option>`
+  ).join("") + `<option value="__new__">✨ Novo tema...</option>`;
+
+  const myItems = customItems.filter(i => i.theme === currentTheme);
+  const listHtml = myItems.length
+    ? myItems.map(i => `
+        <div class="custom-item-row">
+          <div>
+            <p style="margin:0;font-family:'IBM Plex Mono',monospace;font-size:14px">${i.blank.replace("___", `<b style="color:var(--violet)">${i.answer}</b>`)}</p>
+            <p style="margin:2px 0 0;font-size:12px;color:var(--muted)">${i.pt}</p>
+          </div>
+          <button class="del-btn" data-id="${i.id}" title="Remover">🗑</button>
+        </div>`).join("")
+    : `<p class="translation" style="margin:0">Ainda não adicionaste nada a este tema.</p>`;
+
+  return `
+    <div class="card">
+      <p class="card-label mono">adicionar vocabulário ou frase</p>
+      <label class="field-label">Frase em norueguês (usa ___ na palavra a testar, ou deixa vazio para praticar só a palavra)</label>
+      <input class="text-input" id="addSentence" type="text" placeholder="Jeg ___ til jobb hver dag." />
+      <label class="field-label">Palavra ou resposta correta</label>
+      <input class="text-input" id="addAnswer" type="text" placeholder="kjører" />
+      <label class="field-label">Tradução em português</label>
+      <input class="text-input" id="addPt" type="text" placeholder="Eu conduzo para o trabalho todos os dias." />
+      <label class="field-label">Tema</label>
+      <select class="text-input" id="addThemeSelect">${themeOptionsHtml}</select>
+      <input class="text-input" id="addNewTheme" type="text" placeholder="nome do novo tema (ex: família)" style="display:none;margin-top:8px" />
+      <p class="error-text" id="addError" style="display:none;margin-top:12px"></p>
+      <button class="btn" id="btnAddSubmit" style="margin-top:16px">➕ Adicionar</button>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <p class="card-label mono">os teus itens em "${currentThemeLabel}" (${myItems.length})</p>
+      ${listHtml}
+    </div>
+    <div class="card" style="margin-top:16px">
+      <p class="card-label mono">importar vocabulário em lote</p>
+      <p class="translation" style="margin-bottom:12px">
+        Útil para colar vocabulário que a Claude extraiu de um vídeo do YouTube ou de outro material. Um item por linha, neste formato:<br>
+        <span class="mono" style="font-size:12px;color:var(--text)">frase com ___ | resposta | tradução em português | tema</span><br>
+        <span class="mono" style="font-size:12px;color:var(--muted2)">Kan du sjekke ___? | sikringen | Podes verificar o fusível? | trabalho</span>
+      </p>
+      <textarea class="text-input" id="importBox" rows="6" style="resize:vertical;font-family:'IBM Plex Mono',monospace;font-size:13px" placeholder="frase | resposta | tradução | tema"></textarea>
+      <p class="error-text" id="importError" style="display:none;margin-top:12px"></p>
+      <p class="feedback-text" id="importSuccess" style="display:none;color:var(--green)"></p>
+      <button class="btn" id="btnImport" style="margin-top:16px">📥 Importar tudo</button>
+    </div>
+    <p class="note">O que adicionares aqui fica guardado neste telemóvel/navegador e entra automaticamente nos exercícios e na prática deste tema. As opções de escolha múltipla são geradas a partir de outras palavras do mesmo tema.</p>
+  `;
+}
 
 function shuffle(arr) {
   const a = [...arr];
@@ -505,7 +804,7 @@ function finishTest() {
 }
 
 // ---------- Tabs ----------
-document.querySelectorAll(".tab-btn").forEach(btn => {
+document.querySelectorAll("#mainTabs .tab-btn").forEach(btn => {
   btn.onclick = () => { currentTab = btn.dataset.tab; render(); };
 });
 
