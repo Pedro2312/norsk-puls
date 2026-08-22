@@ -231,6 +231,66 @@
 
   .center-card { text-align: center; }
   .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+
+  /* ---- Jornal / leitor de notícias ---- */
+  .news-city-tabs { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 16px; padding-bottom: 2px; }
+  .news-city-tabs .tab-btn { flex-shrink: 0; }
+  .news-article-picker { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 16px; }
+  .news-article-btn {
+    flex-shrink: 0;
+    max-width: 220px;
+    text-align: left;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .news-article-btn.active { border-color: var(--violet); color: var(--text); background: #151E33; }
+  .news-title { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
+  .news-tag { font-size: 11px; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 10px; }
+  .news-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 16px 0 6px; }
+  .news-icon-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 999px;
+    border: 1px solid var(--border2); background: none; color: var(--text);
+    font-size: 16px; cursor: pointer; flex-shrink: 0;
+  }
+  .news-icon-btn.primary { border-color: var(--green); color: var(--green); }
+  .news-select {
+    flex: 1; min-width: 140px;
+    font-family: 'Inter', sans-serif; font-size: 13px; padding: 9px 10px;
+    border-radius: 8px; border: 1px solid var(--border2); background: var(--bg); color: var(--text);
+  }
+  .news-speed-block { margin: 14px 0 4px; }
+  .news-speed-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .news-speed-slider {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px;
+    background: var(--border2); outline: none;
+  }
+  .news-speed-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--green); cursor: pointer; border: none;
+  }
+  .news-speed-slider::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--green); cursor: pointer; border: none;
+  }
+  .news-body { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .news-sent-no {
+    font-size: 17px; font-weight: 500; line-height: 1.6; margin: 0 0 4px;
+    padding: 4px 6px; border-radius: 8px; transition: background 0.2s;
+  }
+  .news-sent-no.current-sentence { background: rgba(139,127,232,0.08); }
+  .news-sent-pt { font-size: 13px; color: var(--muted); margin: 0 0 16px; padding: 0 6px; }
+  .news-word { transition: background 0.1s, color 0.1s; border-radius: 4px; padding: 0 1px; }
+  .news-word.active { background: var(--green); color: #0B1220; }
+  .news-unsupported { color: var(--red); font-size: 13px; margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -244,6 +304,7 @@
   <div class="tabs" id="themeTabs"></div>
 
   <div class="tabs" id="mainTabs">
+    <button class="tab-btn" data-tab="news">📰 Jornal</button>
     <button class="tab-btn active" data-tab="practice">🎙️ Praticar</button>
     <button class="tab-btn" data-tab="write">✍️ Escrever</button>
     <button class="tab-btn" data-tab="exercises">📘 Exercícios</button>
@@ -317,6 +378,121 @@ const THEMES = [
   { id: "trabalho", label: "🔧 Trabalho" },
 ];
 const fullSentence = (item) => item.blank.replace("___", item.answer);
+
+// ---------- Jornal: textos de leitura por cidade ----------
+// Nota: estes textos são reescritos em norueguês simples a partir de notícias
+// reais dos jornais locais (NRK Stor-Oslo, Budstikka, Smaalenenes Avis,
+// Sarpsborg Arbeiderblad), não são uma cópia do texto original — e não há
+// um feed ao vivo dentro do ficheiro (isso exigiria um servidor próprio,
+// que este HTML sozinho não consegue ter por causa de bloqueios do
+// navegador a pedidos entre sites/CORS). Atualizo isto manualmente sempre
+// que continuamos a trabalhar na app, para não teres de pedir todas as vezes.
+const NEWS_UPDATED = "22 de agosto de 2026";
+const NEWS_CITIES = [
+  { id: "oslo", label: "Oslo" },
+  { id: "asker", label: "Asker" },
+  { id: "askim", label: "Askim" },
+  { id: "sarpsborg", label: "Sarpsborg" },
+];
+
+const NEWS = [
+  {
+    id: "oslo-1", city: "oslo",
+    title_no: "Flygelederstreik skaper kaos på Oslo lufthavn",
+    title_pt: "Greve dos controladores aéreos causa caos no Aeroporto de Oslo",
+    sentences: [
+      { no: "En streik blant flygeledere skaper store problemer på Oslo lufthavn i dag.", pt: "Uma greve entre controladores de tráfego aéreo está a causar grandes problemas no Aeroporto de Oslo hoje." },
+      { no: "Rundt 9000 passasjerer blir rammet av kanselleringer hos flyselskapet Norwegian.", pt: "Cerca de 9000 passageiros são afetados por cancelamentos da companhia aérea Norwegian." },
+      { no: "72 avganger fra Oslo lufthavn er kansellert.", pt: "72 voos a partir do Aeroporto de Oslo foram cancelados." },
+      { no: "Luftrommet rundt Oslo stenges for all flytrafikk i noen timer i morgen.", pt: "O espaço aéreo à volta de Oslo vai ser encerrado a todo o tráfego aéreo durante algumas horas amanhã." },
+      { no: "Streiken rammer også flygelederne ved Bergen lufthavn.", pt: "A greve também afeta os controladores de tráfego aéreo no Aeroporto de Bergen." },
+    ],
+  },
+  {
+    id: "oslo-2", city: "oslo",
+    title_no: "Togforsinkelser skaper frustrasjon i Oslo-området",
+    title_pt: "Atrasos nos comboios causam frustração na região de Oslo",
+    sentences: [
+      { no: "Mange togpassasjerer i Oslo-området har opplevd forsinkelser den siste tiden.", pt: "Muitos passageiros de comboio na região de Oslo têm sofrido atrasos recentemente." },
+      { no: "En politiker fra partiet MDG vil gjøre det enklere å få refusjon når toget er forsinket.", pt: "Uma política do partido MDG quer facilitar o reembolso quando o comboio está atrasado." },
+      { no: "Hun mener folk med månedskort bør få pengene raskt tilbake.", pt: "Ela defende que as pessoas com passe mensal devem receber o dinheiro de volta rapidamente." },
+      { no: "Forsinkelsene rammer mange som pendler til jobb hver dag.", pt: "Os atrasos afetam muitas pessoas que fazem o trajeto para o trabalho todos os dias." },
+      { no: "Saken diskuteres nå blant lokale politikere.", pt: "O assunto está agora a ser discutido entre os políticos locais." },
+    ],
+  },
+  {
+    id: "asker-1", city: "asker",
+    title_no: "Togtrøbbel også på Sandvika stasjon i Asker",
+    title_pt: "Também há problemas de comboios na estação de Sandvika, em Asker",
+    sentences: [
+      { no: "Et tog ble nylig stående stille på Sandvika stasjon i Asker.", pt: "Um comboio ficou recentemente parado na estação de Sandvika, em Asker." },
+      { no: "Togtrøbbel er et vanlig tema i lokalavisen Budstikka om dagen.", pt: "Problemas com os comboios são um tema comum no jornal local Budstikka nos últimos tempos." },
+      { no: "Mange pendlere i Asker bruker toget for å komme seg til jobb i Oslo.", pt: "Muitos pendulares em Asker usam o comboio para chegar ao trabalho em Oslo." },
+      { no: "Forsinkelser på jernbanen skaper irritasjon blant innbyggerne.", pt: "Os atrasos na linha ferroviária causam irritação entre os residentes." },
+      { no: "Flere ønsker bedre punktlighet på strekningen.", pt: "Muitos pedem mais pontualidade nesta linha." },
+    ],
+  },
+  {
+    id: "asker-2", city: "asker",
+    title_no: "Butikk i Asker stengte etter 22 år",
+    title_pt: "Uma loja em Asker fechou depois de 22 anos",
+    sentences: [
+      { no: "En butikk i Asker sentrum måtte stenge etter 22 år.", pt: "Uma loja no centro de Asker teve de fechar depois de 22 anos." },
+      { no: "Nye virksomheter overtar nå lokalene.", pt: "Novos negócios estão agora a ocupar o espaço." },
+      { no: "Nyheten preger handelsgaten i sentrum.", pt: "A notícia marca a rua comercial do centro." },
+      { no: "Flere kunder er triste over at den gamle butikken er borte.", pt: "Vários clientes ficaram tristes por a loja antiga ter desaparecido." },
+      { no: "Lokalavisen skriver at nye aktører ønsker å satse i området.", pt: "O jornal local escreve que novos empresários querem apostar na zona." },
+    ],
+  },
+  {
+    id: "askim-1", city: "askim",
+    title_no: "Lokal bensinstasjon i Askim har god vekst",
+    title_pt: "Uma bomba de gasolina local em Askim está a crescer bem",
+    sentences: [
+      { no: "En lokal bensinstasjon i Askim-området har hatt god vekst.", pt: "Uma bomba de gasolina local na zona de Askim teve um bom crescimento." },
+      { no: "Omsetningen har økt til over tretti millioner kroner.", pt: "O volume de negócios aumentou para mais de trinta milhões de coroas." },
+      { no: "Stasjonen selger både drivstoff og dagligvarer.", pt: "A estação vende combustível e também bens de consumo diário." },
+      { no: "Eierne sier at gode kunderelasjoner er viktig for suksessen.", pt: "Os proprietários dizem que as boas relações com os clientes são importantes para o sucesso." },
+      { no: "Nyheten er omtalt i lokalavisen Smaalenenes.", pt: "A notícia foi divulgada pelo jornal local Smaalenenes." },
+    ],
+  },
+  {
+    id: "askim-2", city: "askim",
+    title_no: "Askim er i dag en del av Indre Østfold",
+    title_pt: "Askim faz hoje parte do município de Indre Østfold",
+    sentences: [
+      { no: "Askim var tidligere en egen kommune.", pt: "Askim era anteriormente um município independente." },
+      { no: "I 2020 ble Askim slått sammen med flere andre kommuner.", pt: "Em 2020, Askim foi fundida com vários outros municípios." },
+      { no: "Den nye kommunen heter Indre Østfold.", pt: "O novo município chama-se Indre Østfold." },
+      { no: "Askim er fortsatt et viktig sentrum i området.", pt: "Askim continua a ser um centro importante na região." },
+      { no: "Mange tjenester, som skole og helse, styres nå fra samme kommune.", pt: "Muitos serviços, como escola e saúde, são agora geridos pelo mesmo município." },
+    ],
+  },
+  {
+    id: "sarpsborg-1", city: "sarpsborg",
+    title_no: "Vann flommer over i nytt boligfelt i Sarpsborg",
+    title_pt: "Água transborda num novo bairro residencial em Sarpsborg",
+    sentences: [
+      { no: "Et nytt boligfelt i Sarpsborg har fått problemer med vann som flommer over.", pt: "Um novo bairro residencial em Sarpsborg tem tido problemas com água que transborda." },
+      { no: "Beboere forteller om vann som trenger inn når det regner kraftig.", pt: "Os moradores relatam água a entrar nas casas quando chove com força." },
+      { no: "Kommunen ser nå på mulige løsninger.", pt: "O município está agora a analisar possíveis soluções." },
+      { no: "Saken bekymrer flere som nylig har kjøpt bolig i feltet.", pt: "O caso preocupa várias pessoas que compraram casa recentemente no bairro." },
+      { no: "Utbyggeren er også koblet inn i saken.", pt: "A construtora também está envolvida no processo." },
+    ],
+  },
+  {
+    id: "sarpsborg-2", city: "sarpsborg",
+    title_no: "Flere ledige stillinger i Sarpsborg-området",
+    title_pt: "Várias vagas de emprego na região de Sarpsborg",
+    sentences: [
+      { no: "Det finnes flere ledige stillinger i Sarpsborg-området akkurat nå.", pt: "Existem várias vagas de emprego na região de Sarpsborg neste momento." },
+      { no: "Blant annet søkes det etter en leder for digital utvikling i Grålum.", pt: "Entre outras, procura-se um responsável de desenvolvimento digital em Grålum." },
+      { no: "Det er også behov for en strategisk innkjøpsleder.", pt: "Também há necessidade de um responsável estratégico de compras." },
+      { no: "Flere kommuner i Østfold samarbeider om rekruttering.", pt: "Vários municípios de Østfold colaboram na contratação." },
+      { no: "Interesserte kan finne stillingene på nettsidene til lokalavisen.", pt: "Os interessados podem encontrar as vagas no site do jornal local." },
+    ],
+  },
+];
 
 // Word-level Portuguese glosses for every option used in the built-in exercises,
 // so the person can see what each choice means, not just which one was correct.
@@ -448,6 +624,33 @@ function loadRate() {
 function saveRate(r) { try { localStorage.setItem(RATE_KEY, String(r)); } catch {} }
 let speechRate = loadRate();
 
+// ---- Leitor de jornal: voz e velocidade (separado da prática) ----
+const NEWS_RATE_KEY = "norsk-puls-news-rate";
+const NEWS_VOICE_KEY = "norsk-puls-news-voice";
+function loadNewsRate() {
+  try { const raw = localStorage.getItem(NEWS_RATE_KEY); return raw ? parseFloat(raw) : 1.0; } catch { return 1.0; }
+}
+function saveNewsRate(r) { try { localStorage.setItem(NEWS_RATE_KEY, String(r)); } catch {} }
+function loadNewsVoice() {
+  try { return localStorage.getItem(NEWS_VOICE_KEY) || ""; } catch { return ""; }
+}
+function saveNewsVoice(name) { try { localStorage.setItem(NEWS_VOICE_KEY, name); } catch {} }
+
+function getNorwegianVoices() {
+  if (!window.speechSynthesis) return [];
+  return window.speechSynthesis.getVoices().filter(v => v.lang && /^(nb|nn|no)/i.test(v.lang));
+}
+
+// Maps each word in a sentence to its character start/end, using the exact
+// same tokenisation the browser's onboundary charIndex refers to (\S+ runs).
+function buildWordMap(text) {
+  const map = [];
+  const re = /\S+/g;
+  let m, idx = 0;
+  while ((m = re.exec(text))) { map.push({ start: m.index, end: m.index + m[0].length, idx }); idx++; }
+  return map;
+}
+
 function speak(text, onError) {
   if (!window.speechSynthesis) { onError && onError("A síntese de voz não é suportada neste navegador."); return; }
   const doSpeak = () => {
@@ -479,13 +682,29 @@ function getRecognition() {
 }
 
 // ---------- State ----------
-let currentTab = "practice";
+let currentTab = "news";
 let currentTheme = "basico";
 let practiceIdx = 0, exerciseIdx = 0, exerciseScore = { correct: 0, total: 0 }, exerciseOptions = null, writeIdx = 0;
 let listening = false, heard = "", result = null, micError = "", showPhonetic = false;
 let recInstance = null;
 let exSelected = null;
 let testState = { running: false, set: [], idx: 0, selected: null, tally: 0, finished: false, lastScore: null };
+
+// ---- Estado do leitor de jornal ----
+let newsCity = "oslo";
+let newsArticleId = null; // definido em getNewsArticle() na primeira renderização
+let newsRate = loadNewsRate();
+let newsVoiceName = loadNewsVoice();
+let newsPlaying = false, newsPaused = false;
+let newsSentenceIdx = 0;
+let suppressNewsAdvance = false;
+
+function newsArticlesForCity() { return NEWS.filter(a => a.city === newsCity); }
+function currentNewsArticle() {
+  const list = newsArticlesForCity();
+  if (!newsArticleId || !list.find(a => a.id === newsArticleId)) newsArticleId = list[0] ? list[0].id : null;
+  return list.find(a => a.id === newsArticleId) || null;
+}
 
 function pool() { return allItems().filter(i => i.theme === currentTheme); }
 
@@ -513,12 +732,70 @@ function render() {
   renderThemeTabs();
   document.querySelectorAll("#mainTabs .tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === currentTab));
   const el = document.getElementById("content");
-  if (currentTab === "practice") el.innerHTML = renderPractice();
+  if (currentTab === "news") el.innerHTML = renderNews();
+  else if (currentTab === "practice") el.innerHTML = renderPractice();
   else if (currentTab === "write") el.innerHTML = renderWrite();
   else if (currentTab === "exercises") el.innerHTML = renderExercises();
   else if (currentTab === "test") el.innerHTML = renderTest();
   else el.innerHTML = renderAdd();
   attachHandlers();
+}
+
+function renderNews() {
+  const supported = !!window.speechSynthesis;
+  const cityTabsHtml = NEWS_CITIES.map(c =>
+    `<button class="tab-btn ${c.id === newsCity ? "active" : ""}" data-city="${c.id}">${c.label}</button>`
+  ).join("");
+
+  const article = currentNewsArticle();
+  const list = newsArticlesForCity();
+  const articlePickerHtml = list.length > 1
+    ? `<div class="news-article-picker">${list.map(a =>
+        `<button class="news-article-btn ${a.id === (article && article.id) ? "active" : ""}" data-article="${a.id}">${a.title_no}</button>`
+      ).join("")}</div>`
+    : "";
+
+  if (!article) {
+    return `
+      <div class="news-city-tabs">${cityTabsHtml}</div>
+      <div class="card center-card"><p class="translation">Ainda não há textos para esta cidade.</p></div>`;
+  }
+
+  const voices = getNorwegianVoices();
+  const voiceOptionsHtml = voices.length
+    ? voices.map(v => `<option value="${v.name}" ${v.name === newsVoiceName ? "selected" : ""}>${v.name} (${v.lang})</option>`).join("")
+    : `<option value="">a carregar vozes...</option>`;
+
+  const bodyHtml = article.sentences.map((s, i) => {
+    const words = s.no.match(/\S+/g) || [];
+    const wordsHtml = words.map((w, wi) => `<span id="w-${i}-${wi}" class="news-word">${w}</span>`).join(" ");
+    return `<p class="news-sent-no display" id="sent-${i}">${wordsHtml}</p><p class="news-sent-pt">${s.pt}</p>`;
+  }).join("");
+
+  return `
+    <div class="news-city-tabs">${cityTabsHtml}</div>
+    ${articlePickerHtml}
+    <div class="card">
+      <p class="news-tag mono">notícias de hoje · ${NEWS_CITIES.find(c => c.id === newsCity).label} · atualizado a ${NEWS_UPDATED}</p>
+      <p class="news-title display">${article.title_no}</p>
+      <p class="translation" style="margin-bottom:0">${article.title_pt}</p>
+
+      ${supported ? `
+      <div class="news-controls">
+        <button class="news-icon-btn primary" id="btnNewsPlay" title="Ler em voz alta">${!newsPlaying ? "▶️" : (newsPaused ? "▶️" : "⏸️")}</button>
+        <button class="news-icon-btn" id="btnNewsStop" title="Parar">⏹️</button>
+        <select class="news-select" id="newsVoiceSelect">${voiceOptionsHtml}</select>
+      </div>
+      <div class="news-speed-block">
+        <div class="news-speed-label"><span>velocidade de leitura</span><span class="mono">${newsRate.toFixed(2)}x</span></div>
+        <input class="news-speed-slider" id="newsSpeedSlider" type="range" min="0.5" max="1.0" step="0.05" value="${newsRate}">
+      </div>
+      ` : `<p class="news-unsupported">A síntese de voz não é suportada neste navegador.</p>`}
+
+      <div class="news-body">${bodyHtml}</div>
+    </div>
+    <p class="note">Textos reescritos em norueguês simples a partir de notícias reais dos jornais locais (não são a cópia exata do artigo original). Sempre que voltarmos a mexer na app, atualizo estas notícias sem teres de pedir.</p>
+  `;
 }
 
 function renderPractice() {
@@ -695,6 +972,62 @@ function renderTest() {
 
 // ---------- Handlers ----------
 function attachHandlers() {
+  if (currentTab === "news") {
+    document.querySelectorAll(".news-city-tabs .tab-btn").forEach(b => {
+      b.onclick = () => {
+        if (b.dataset.city === newsCity) return;
+        stopNewsPlayback();
+        newsCity = b.dataset.city;
+        newsArticleId = null;
+        newsSentenceIdx = 0;
+        render();
+      };
+    });
+    document.querySelectorAll(".news-article-btn").forEach(b => {
+      b.onclick = () => {
+        if (b.dataset.article === newsArticleId) return;
+        stopNewsPlayback();
+        newsArticleId = b.dataset.article;
+        newsSentenceIdx = 0;
+        render();
+      };
+    });
+    const btnPlay = document.getElementById("btnNewsPlay");
+    if (btnPlay) btnPlay.onclick = () => toggleNewsPlay();
+    const btnStop = document.getElementById("btnNewsStop");
+    if (btnStop) btnStop.onclick = () => stopNewsPlayback();
+    const voiceSelect = document.getElementById("newsVoiceSelect");
+    if (voiceSelect) voiceSelect.onchange = () => {
+      newsVoiceName = voiceSelect.value;
+      saveNewsVoice(newsVoiceName);
+      restartNewsSentence();
+    };
+    const speedSlider = document.getElementById("newsSpeedSlider");
+    if (speedSlider) speedSlider.onchange = () => {
+      newsRate = parseFloat(speedSlider.value);
+      saveNewsRate(newsRate);
+      restartNewsSentence();
+      render();
+    };
+    // Sentence click also lets the person jump reading to that point.
+    document.querySelectorAll(".news-sent-no").forEach(el => {
+      el.onclick = () => {
+        const idx = parseInt(el.id.replace("sent-", ""), 10);
+        stopNewsPlayback();
+        newsSentenceIdx = idx;
+        newsPlaying = true; newsPaused = false;
+        speakNewsSentence(idx);
+        updateNewsPlayButton();
+      };
+    });
+    // Some browsers (esp. Chrome on Android) only populate getVoices() after
+    // this event fires, and the initial render can happen before that.
+    if (window.speechSynthesis && getNorwegianVoices().length === 0) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        if (currentTab === "news") render();
+      };
+    }
+  }
   if (currentTab === "practice") {
     const btnOuvir = document.getElementById("btnOuvir");
     if (btnOuvir) btnOuvir.onclick = () => {
@@ -986,6 +1319,97 @@ function setupCanvas(canvas) {
   canvas.onpointercancel = stop;
 }
 
+// ---------- Leitor de jornal: motor de reprodução ----------
+function highlightNewsWord(sentIdx, wordIdx) {
+  document.querySelectorAll(".news-word.active").forEach(el => el.classList.remove("active"));
+  if (sentIdx == null || wordIdx == null || wordIdx < 0) return;
+  const el = document.getElementById(`w-${sentIdx}-${wordIdx}`);
+  if (el) {
+    el.classList.add("active");
+    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+}
+function highlightNewsSentence(idx) {
+  document.querySelectorAll(".news-sent-no.current-sentence").forEach(el => el.classList.remove("current-sentence"));
+  const el = document.getElementById(`sent-${idx}`);
+  if (el) { el.classList.add("current-sentence"); el.scrollIntoView({ block: "center", behavior: "smooth" }); }
+}
+function updateNewsPlayButton() {
+  const btn = document.getElementById("btnNewsPlay");
+  if (!btn) return;
+  btn.textContent = !newsPlaying ? "▶️" : (newsPaused ? "▶️" : "⏸️");
+  btn.title = !newsPlaying ? "Ler em voz alta" : (newsPaused ? "Continuar" : "Pausar");
+}
+
+function speakNewsSentence(idx) {
+  const article = currentNewsArticle();
+  if (!article) return;
+  if (idx >= article.sentences.length) {
+    newsPlaying = false; newsPaused = false; newsSentenceIdx = 0;
+    highlightNewsWord(null, -1); highlightNewsSentence(-1);
+    updateNewsPlayButton();
+    return;
+  }
+  newsSentenceIdx = idx;
+  const sent = article.sentences[idx];
+  const utter = new SpeechSynthesisUtterance(sent.no);
+  utter.lang = "nb-NO";
+  const voices = window.speechSynthesis.getVoices();
+  const chosen = voices.find(v => v.name === newsVoiceName)
+    || voices.find(v => v.lang && /^nb/i.test(v.lang))
+    || voices.find(v => v.lang && /^no/i.test(v.lang));
+  if (chosen) utter.voice = chosen;
+  utter.rate = newsRate;
+  const map = buildWordMap(sent.no);
+  utter.onboundary = (e) => {
+    if (e.name && e.name !== "word") return; // ignora boundaries de frase noutros browsers
+    let found = map.find(w => e.charIndex >= w.start && e.charIndex < w.end);
+    if (!found) found = [...map].reverse().find(w => w.start <= e.charIndex);
+    highlightNewsWord(idx, found ? found.idx : -1);
+  };
+  utter.onend = () => {
+    if (suppressNewsAdvance) { suppressNewsAdvance = false; return; }
+    if (newsPlaying) speakNewsSentence(idx + 1);
+  };
+  utter.onerror = () => {
+    if (suppressNewsAdvance) { suppressNewsAdvance = false; return; }
+    newsPlaying = false; newsPaused = false; updateNewsPlayButton();
+  };
+  highlightNewsSentence(idx);
+  window.speechSynthesis.speak(utter);
+}
+
+function restartNewsSentence() {
+  if (!newsPlaying || newsPaused) return;
+  suppressNewsAdvance = true;
+  window.speechSynthesis.cancel();
+  speakNewsSentence(newsSentenceIdx);
+}
+
+function toggleNewsPlay() {
+  if (!window.speechSynthesis) return;
+  if (!newsPlaying) {
+    newsPlaying = true; newsPaused = false;
+    speakNewsSentence(newsSentenceIdx || 0);
+  } else if (!newsPaused) {
+    window.speechSynthesis.pause();
+    newsPaused = true;
+  } else {
+    window.speechSynthesis.resume();
+    newsPaused = false;
+  }
+  updateNewsPlayButton();
+}
+
+function stopNewsPlayback() {
+  if (!window.speechSynthesis) return;
+  suppressNewsAdvance = true;
+  window.speechSynthesis.cancel();
+  newsPlaying = false; newsPaused = false; newsSentenceIdx = 0;
+  highlightNewsWord(null, -1); highlightNewsSentence(-1);
+  updateNewsPlayButton();
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i+1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -1010,7 +1434,11 @@ function finishTest() {
 
 // ---------- Tabs ----------
 document.querySelectorAll("#mainTabs .tab-btn").forEach(btn => {
-  btn.onclick = () => { currentTab = btn.dataset.tab; render(); };
+  btn.onclick = () => {
+    if (currentTab === "news" && btn.dataset.tab !== "news") stopNewsPlayback();
+    currentTab = btn.dataset.tab;
+    render();
+  };
 });
 
 render();
