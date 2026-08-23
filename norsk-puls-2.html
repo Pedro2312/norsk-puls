@@ -283,11 +283,11 @@
   }
   .news-body { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
   .news-sent-no {
-    font-size: 17px; font-weight: 500; line-height: 1.6; margin: 0 0 4px;
-    padding: 4px 6px; border-radius: 8px; transition: background 0.2s;
+    font-size: 16px; font-weight: 400; line-height: 1.65; margin: 0 0 3px;
+    padding: 3px 6px; border-radius: 8px; transition: background 0.2s;
   }
   .news-sent-no.current-sentence { background: rgba(139,127,232,0.08); }
-  .news-sent-pt { font-size: 13px; color: var(--muted); margin: 0 0 16px; padding: 0 6px; }
+  .news-sent-pt { font-size: 13px; color: var(--muted); margin: 0 0 14px; padding: 0 6px; }
   .news-word { transition: background 0.1s, color 0.1s; border-radius: 4px; padding: 0 1px; }
   .news-word.active { background: var(--green); color: #0B1220; }
   .news-unsupported { color: var(--red); font-size: 13px; margin-top: 12px; }
@@ -297,7 +297,7 @@
 <div class="wrap">
   <div class="header-row">
     <h1 class="display">Norsk <span class="aurora-text">Puls</span></h1>
-    <span class="level-badge" id="levelBadge">nível 1 / 3</span>
+    <button class="level-badge" id="levelBadge" style="cursor:pointer;font:inherit" data-tab="stats">nível 1 / 3</button>
   </div>
   <p class="subtitle">Português → Norueguês, com foco na pronúncia</p>
 
@@ -309,6 +309,7 @@
     <button class="tab-btn" data-tab="write">✍️ Escrever</button>
     <button class="tab-btn" data-tab="exercises">📘 Exercícios</button>
     <button class="tab-btn" data-tab="test">🏆 Teste</button>
+    <button class="tab-btn" data-tab="stats">📊 Progresso</button>
     <button class="tab-btn" data-tab="add">➕ Adicionar</button>
   </div>
 
@@ -1025,6 +1026,10 @@ function renderThemeTabs() {
 // ---------- Render ----------
 function render() {
   document.getElementById("levelBadge").textContent = `nível ${progress.level} / 3`;
+  document.getElementById("levelBadge").onclick = () => {
+    if (currentTab === "news") stopNewsPlayback();
+    currentTab = "stats"; render();
+  };
   renderThemeTabs();
   document.querySelectorAll("#mainTabs .tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === currentTab));
   const el = document.getElementById("content");
@@ -1033,6 +1038,7 @@ function render() {
   else if (currentTab === "write") el.innerHTML = renderWrite();
   else if (currentTab === "exercises") el.innerHTML = renderExercises();
   else if (currentTab === "test") el.innerHTML = renderTest();
+  else if (currentTab === "stats") el.innerHTML = renderStats();
   else el.innerHTML = renderAdd();
   attachHandlers();
 }
@@ -1065,7 +1071,7 @@ function renderNews() {
   const bodyHtml = article.sentences.map((s, i) => {
     const words = s.no.match(/\S+/g) || [];
     const wordsHtml = words.map((w, wi) => `<span id="w-${i}-${wi}" class="news-word">${w}</span>`).join(" ");
-    return `<p class="news-sent-no display" id="sent-${i}">${wordsHtml}</p><p class="news-sent-pt">${s.pt}</p>`;
+    return `<p class="news-sent-no" id="sent-${i}">${wordsHtml}</p><p class="news-sent-pt">${s.pt}</p>`;
   }).join("");
 
   return `
@@ -1644,6 +1650,69 @@ function startListening() {
 }
 function stopListening() { if (recInstance) recInstance.stop(); }
 
+function renderStats() {
+  const themes = getThemes();
+  let totalAll = 0, doneAll = 0;
+  const rows = themes.map(t => {
+    const order = resolveOrder("ex", t.id);
+    const cursor = Math.min(getCursor("ex", t.id, order.length), order.length);
+    totalAll += order.length;
+    doneAll += cursor;
+    return { theme: t, total: order.length, done: cursor };
+  }).filter(r => r.total > 0);
+  const pct = totalAll ? Math.round((doneAll / totalAll) * 100) : 0;
+
+  const testCount = progress.history.length;
+  const avgScore = testCount ? Math.round(progress.history.reduce((s, h) => s + h.score, 0) / testCount) : null;
+  const lastScore = testCount ? progress.history[progress.history.length - 1].score : null;
+  const testRowsHtml = testCount
+    ? progress.history.slice(-8).reverse().map(h => {
+        const d = new Date(h.date);
+        const dateLabel = isNaN(d.getTime()) ? "" : d.toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+        const c = h.score >= 80 ? "var(--green)" : h.score >= 50 ? "var(--amber)" : "var(--red)";
+        return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span class="mono" style="font-size:12px;color:var(--muted)">${dateLabel}</span>
+          <span class="mono" style="font-size:13px;color:${c}">${h.score}%</span>
+        </div>`;
+      }).join("")
+    : `<p class="translation" style="margin:0">Ainda não fizeste nenhum teste — vai a 🏆 Teste quando quiseres ver onde estás.</p>`;
+
+  return `
+    <div class="card center-card">
+      <p class="card-label mono" style="margin-bottom:4px">progresso geral nos exercícios</p>
+      <p class="display" style="font-size:42px;font-weight:700;margin:4px 0">${pct}%</p>
+      <p class="translation" style="margin-bottom:0">${doneAll} de ${totalAll} exercícios já respondidos certo pelo menos uma vez, em todos os temas</p>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <p class="card-label mono">progresso por tema</p>
+      ${rows.map(r => {
+        const rp = r.total ? Math.round((r.done / r.total) * 100) : 0;
+        return `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+            <span>${r.theme.label}</span>
+            <span class="mono" style="color:var(--muted)">${r.done}/${r.total}</span>
+          </div>
+          <div style="height:6px;border-radius:999px;background:var(--border2);overflow:hidden">
+            <div style="height:100%;width:${rp}%;background:${rp >= 80 ? "var(--green)" : rp >= 40 ? "var(--violet)" : "var(--border2)"}"></div>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="top-row">
+        <p class="card-label mono" style="margin:0">testes</p>
+        <span class="mono" style="font-size:12px;color:var(--muted)">${testCount} feito(s)${avgScore !== null ? ` · média ${avgScore}%` : ""}</span>
+      </div>
+      ${testCount ? `<p class="translation" style="margin:0 0 12px">Último resultado: <b style="color:var(--text)">${lastScore}%</b></p>` : ""}
+      ${testRowsHtml}
+    </div>
+    <p class="note">Nota: o "nível" ao lado do título só sobe quando fazes um teste e acertas 80% ou mais — é um selo do teu histórico, não bloqueia nem desbloqueia matéria. Este painel é que mostra o teu progresso real.</p>
+  `;
+}
+
 function renderAdd() {
   const themes = getThemes();
   const currentThemeLabel = themes.find(t => t.id === currentTheme)?.label || currentTheme;
@@ -1795,49 +1864,44 @@ function speakNewsSentence(idx) {
   utter.rate = newsRate;
   const map = buildWordMap(sent.no);
 
-  // Nem todos os motores de voz (sobretudo em norueguês, em muitos telemóveis
-  // Android) reportam onde vão na leitura palavra a palavra. Se não chegar
-  // nenhum evento "boundary" pouco depois de começar a falar, usamos um
-  // temporizador aproximado (duração estimada por palavra) como plano B, para
-  // o destaque continuar a mexer mesmo nesses aparelhos. Se um evento real
-  // chegar entretanto, o plano B é imediatamente cancelado e passa a mandar o
-  // evento real.
-  let boundaryFired = false;
-  let fallbackStartTimer = null;
-  let fallbackInterval = null;
-  const clearFallback = () => {
-    if (fallbackStartTimer) { clearTimeout(fallbackStartTimer); fallbackStartTimer = null; }
-    if (fallbackInterval) { clearInterval(fallbackInterval); fallbackInterval = null; }
+  // O destaque é conduzido por um horário ESTIMADO (palavras longas demoram
+  // mais a dizer do que "og"/"er"/"på" — por isso o tempo por palavra é
+  // proporcional ao nº de letras, não fixo). Isto evita o atraso que se
+  // acumulava com frases cheias de palavras curtas seguidas.
+  // Sempre que chega um evento real "boundary" do motor de voz, corrigimos
+  // logo para essa posição e reagendamos o resto a partir dali — o horário
+  // estimado nunca fica muito tempo a "adivinhar às cegas".
+  let scheduled = [];
+  const clearSchedule = () => { scheduled.forEach(t => clearTimeout(t)); scheduled = []; };
+  const runSchedule = (fromWi) => {
+    clearSchedule();
+    if (!words.length) return;
+    const charMs = 62 / Math.max(newsRate, 0.35);
+    const minMs = 150 / Math.max(newsRate, 0.35);
+    let delay = 0;
+    for (let wi = fromWi; wi < words.length; wi++) {
+      scheduled.push(setTimeout(() => highlightNewsWord(idx, wi), delay));
+      delay += Math.max(minMs, words[wi].length * charMs);
+    }
   };
-  utter.onstart = () => {
-    fallbackStartTimer = setTimeout(() => {
-      if (boundaryFired || !words.length) return;
-      let wi = 0;
-      highlightNewsWord(idx, 0);
-      const msPerWord = Math.max(180, 420 / newsRate);
-      fallbackInterval = setInterval(() => {
-        wi++;
-        if (boundaryFired) { clearFallback(); return; }
-        if (wi >= words.length) { clearFallback(); return; }
-        highlightNewsWord(idx, wi);
-      }, msPerWord);
-    }, 350);
-  };
+  utter.onstart = () => runSchedule(0);
   utter.onboundary = (e) => {
     if (e.name && e.name !== "word") return; // ignora boundaries de frase noutros browsers
-    boundaryFired = true;
-    clearFallback();
     let found = map.find(w => e.charIndex >= w.start && e.charIndex < w.end);
     if (!found) found = [...map].reverse().find(w => w.start <= e.charIndex);
-    highlightNewsWord(idx, found ? found.idx : -1);
+    const wi = found ? found.idx : -1;
+    if (wi >= 0) {
+      highlightNewsWord(idx, wi);
+      runSchedule(wi + 1);
+    }
   };
   utter.onend = () => {
-    clearFallback();
+    clearSchedule();
     if (suppressNewsAdvance) { suppressNewsAdvance = false; return; }
     if (newsPlaying) speakNewsSentence(idx + 1);
   };
   utter.onerror = () => {
-    clearFallback();
+    clearSchedule();
     if (suppressNewsAdvance) { suppressNewsAdvance = false; return; }
     newsPlaying = false; newsPaused = false; updateNewsPlayButton();
   };
