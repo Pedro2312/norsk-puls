@@ -751,16 +751,53 @@ function wordSimilarity(a, b) {
   return maxLen === 0 ? 1 : 1 - dist / maxLen;
 }
 function normalize(s) { return s.toLowerCase().replace(/[.,!?;:]/g, "").trim(); }
-function compareSentences(target, heard) {
+
+// Alinha as palavras-alvo com as palavras ouvidas por posição (programação
+// dinâmica), em vez de aceitar a MELHOR palavra ouvida em qualquer posição da
+// frase. Isto evita o problema de uma única palavra bem dita "salvar" várias
+// palavras-alvo parecidas — cada palavra ouvida só pode ser usada uma vez, e
+// uma palavra-alvo que falte fica mesmo com pontuação 0.
+function alignWords(targetWords, heardWords) {
+  const m = targetWords.length, n = heardWords.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  const choice = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(null));
+  for (let i = 1; i <= m; i++) choice[i][0] = "skipT";
+  for (let j = 1; j <= n; j++) choice[0][j] = "skipH";
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const matchScore = dp[i - 1][j - 1] + wordSimilarity(targetWords[i - 1], heardWords[j - 1]);
+      const skipT = dp[i - 1][j];
+      const skipH = dp[i][j - 1];
+      if (matchScore >= skipT && matchScore >= skipH) { dp[i][j] = matchScore; choice[i][j] = "match"; }
+      else if (skipT >= skipH) { dp[i][j] = skipT; choice[i][j] = "skipT"; }
+      else { dp[i][j] = skipH; choice[i][j] = "skipH"; }
+    }
+  }
+  const perTarget = new Array(m).fill(0);
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    const c = choice[i][j];
+    if (c === "match") { perTarget[i - 1] = wordSimilarity(targetWords[i - 1], heardWords[j - 1]); i--; j--; }
+    else if (c === "skipT") { perTarget[i - 1] = 0; i--; }
+    else { j--; }
+  }
+  return perTarget;
+}
+
+// confidence: valor 0-1 opcional que o próprio reconhecedor de voz devolve
+// sobre o quão certo está da transcrição — quando disponível, ajuda a puxar
+// a pontuação para baixo em frases arrastadas/impercetíveis que, por sorte,
+// ainda geraram um texto parecido com o alvo.
+function compareSentences(target, heard, confidence) {
   const targetWords = normalize(target).split(/\s+/).filter(Boolean);
   const heardWords = normalize(heard).split(/\s+/).filter(Boolean);
-  const results = targetWords.map((tw) => {
-    let best = 0;
-    for (const hw of heardWords) best = Math.max(best, wordSimilarity(tw, hw));
-    return { word: tw, score: best };
-  });
-  const overall = results.length ? Math.round((results.reduce((s, r) => s + r.score, 0) / results.length) * 100) : 0;
-  return { results, overall };
+  const perTarget = alignWords(targetWords, heardWords);
+  const results = targetWords.map((tw, i) => ({ word: tw, score: perTarget[i] }));
+  let overall = results.length ? (results.reduce((s, r) => s + r.score, 0) / results.length) : 0;
+  if (typeof confidence === "number" && !isNaN(confidence)) {
+    overall *= (0.55 + 0.45 * Math.max(0, Math.min(1, confidence)));
+  }
+  return { results, overall: Math.round(overall * 100) };
 }
 
 // ---------- Storage (localStorage — this runs as a standalone file, not a Claude artifact) ----------
@@ -1576,10 +1613,16 @@ function startListening() {
   if (!rec) { render(); return; }
   recInstance = rec;
   heard = ""; result = null; micError = ""; listening = true;
+  let lastConfidence = null;
   render();
   rec.onresult = (e) => {
     let transcript = "";
-    for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+    for (let i = 0; i < e.results.length; i++) {
+      transcript += e.results[i][0].transcript;
+      if (e.results[i].isFinal && typeof e.results[i][0].confidence === "number") {
+        lastConfidence = e.results[i][0].confidence;
+      }
+    }
     heard = transcript;
     render();
   };
@@ -1593,7 +1636,8 @@ function startListening() {
   rec.onend = () => {
     listening = false;
     const p = pool(); const item = p[practiceIdx];
-    if (heard) result = compareSentences(fullSentence(item), heard);
+    // confiança 0 é um valor real do browser, por isso comparamos com null explicitamente
+    if (heard) result = compareSentences(fullSentence(item), heard, lastConfidence === null ? undefined : lastConfidence);
     render();
   };
   try { rec.start(); } catch { listening = false; micError = "Não foi possível iniciar o microfone."; render(); }
@@ -1740,6 +1784,7 @@ function speakNewsSentence(idx) {
   }
   newsSentenceIdx = idx;
   const sent = article.sentences[idx];
+  const words = sent.no.match(/\S+/g) || [];
   const utter = new SpeechSynthesisUtterance(sent.no);
   utter.lang = "nb-NO";
   const voices = window.speechSynthesis.getVoices();
@@ -1749,17 +1794,50 @@ function speakNewsSentence(idx) {
   if (chosen) utter.voice = chosen;
   utter.rate = newsRate;
   const map = buildWordMap(sent.no);
+
+  // Nem todos os motores de voz (sobretudo em norueguês, em muitos telemóveis
+  // Android) reportam onde vão na leitura palavra a palavra. Se não chegar
+  // nenhum evento "boundary" pouco depois de começar a falar, usamos um
+  // temporizador aproximado (duração estimada por palavra) como plano B, para
+  // o destaque continuar a mexer mesmo nesses aparelhos. Se um evento real
+  // chegar entretanto, o plano B é imediatamente cancelado e passa a mandar o
+  // evento real.
+  let boundaryFired = false;
+  let fallbackStartTimer = null;
+  let fallbackInterval = null;
+  const clearFallback = () => {
+    if (fallbackStartTimer) { clearTimeout(fallbackStartTimer); fallbackStartTimer = null; }
+    if (fallbackInterval) { clearInterval(fallbackInterval); fallbackInterval = null; }
+  };
+  utter.onstart = () => {
+    fallbackStartTimer = setTimeout(() => {
+      if (boundaryFired || !words.length) return;
+      let wi = 0;
+      highlightNewsWord(idx, 0);
+      const msPerWord = Math.max(180, 420 / newsRate);
+      fallbackInterval = setInterval(() => {
+        wi++;
+        if (boundaryFired) { clearFallback(); return; }
+        if (wi >= words.length) { clearFallback(); return; }
+        highlightNewsWord(idx, wi);
+      }, msPerWord);
+    }, 350);
+  };
   utter.onboundary = (e) => {
     if (e.name && e.name !== "word") return; // ignora boundaries de frase noutros browsers
+    boundaryFired = true;
+    clearFallback();
     let found = map.find(w => e.charIndex >= w.start && e.charIndex < w.end);
     if (!found) found = [...map].reverse().find(w => w.start <= e.charIndex);
     highlightNewsWord(idx, found ? found.idx : -1);
   };
   utter.onend = () => {
+    clearFallback();
     if (suppressNewsAdvance) { suppressNewsAdvance = false; return; }
     if (newsPlaying) speakNewsSentence(idx + 1);
   };
   utter.onerror = () => {
+    clearFallback();
     if (suppressNewsAdvance) { suppressNewsAdvance = false; return; }
     newsPlaying = false; newsPaused = false; updateNewsPlayButton();
   };
