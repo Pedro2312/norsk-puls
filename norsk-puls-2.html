@@ -389,6 +389,22 @@ const THEMES = [
 ];
 const fullSentence = (item) => item.blank.replace("___", item.answer);
 
+// Deteta itens em formato "Pergunta? — Resposta." (gerados como estrutura de
+// Pergunta+Resposta) para os poder separar no modo "pensar a pergunta" do
+// Escrever. Devolve null se o item não tiver essa estrutura.
+function splitQA(item) {
+  const no = fullSentence(item);
+  const noParts = no.split(" — ");
+  const ptParts = (item.pt || "").split(" — ");
+  if (noParts.length !== 2 || ptParts.length !== 2) return null;
+  return {
+    question: noParts[0].trim(),
+    answer: noParts[1].trim(),
+    ptQuestion: ptParts[0].trim(),
+    ptAnswer: ptParts[1].trim(),
+  };
+}
+
 // ==================================================================
 // MOTOR DE GERAÇÃO: banco de vocabulário + moldes de frase.
 // Em vez de escrever centenas de frases à mão (frágil e difícil de manter),
@@ -396,7 +412,7 @@ const fullSentence = (item) => item.blank.replace("___", item.answer);
 // O produto das combinações dá uma baralho bem maior, sem repetição maçadora,
 // e continua fácil de rever/corrigir uma palavra sem mexer em tudo.
 // ==================================================================
-function genMulti(theme, variants, bank, noField, ptField) {
+function genMulti(theme, variants, bank, noField, ptField, cat) {
   const out = [];
   variants.forEach(v => {
     bank.forEach(w => {
@@ -405,6 +421,7 @@ function genMulti(theme, variants, bank, noField, ptField) {
         blank: v.no.replace("{}", "___"),
         answer: w[noField],
         pt: v.pt.replace("{}", w[ptField]),
+        cat: cat || null,
       });
     });
   });
@@ -506,132 +523,216 @@ let GENERATED = [];
 GENERATED = GENERATED.concat(genMulti("apresentacao", [
   { no: "Jeg kommer fra {}.", pt: "Eu venho {}." },
   { no: "Kommer du fra {}?", pt: "Vens {}?" },
-  { no: "Jeg kom fra {} før jeg flyttet hit.", pt: "Eu vim {} antes de me mudar para cá." },
-], COUNTRIES, "no", "pt_de"));
+], COUNTRIES, "no", "pt_de", "country"));
 
 GENERATED = GENERATED.concat(genMulti("apresentacao", [
-  { no: "Jeg er fra {}.", pt: "Eu sou {}." },
-  { no: "Er du fra {}?", pt: "És {}?" },
   { no: "Hvor er du fra? — Jeg er fra {}.", pt: "De onde és? — Eu sou {}." },
-], COUNTRIES, "no", "pt_de"));
+], COUNTRIES, "no", "pt_de", "country"));
+
+// Nacionalidade como adjetivo (não o nome do país) — vocabulário genuinamente
+// diferente, não só a mesma frase a trocar o país no fim.
+const NATIONALITIES = [
+  { no: "portugisisk", pt: "português" }, { no: "norsk", pt: "norueguês" }, { no: "spansk", pt: "espanhol" },
+  { no: "brasiliansk", pt: "brasileiro" }, { no: "svensk", pt: "sueco" }, { no: "dansk", pt: "dinamarquês" },
+  { no: "polsk", pt: "polaco" }, { no: "ukrainsk", pt: "ucraniano" }, { no: "tysk", pt: "alemão" },
+  { no: "italiensk", pt: "italiano" }, { no: "fransk", pt: "francês" }, { no: "engelsk", pt: "inglês" },
+];
+GENERATED = GENERATED.concat(genMulti("apresentacao", [
+  { no: "Jeg er ___.", pt: "Eu sou {}." },
+  { no: "Er du ___?", pt: "És {}?" },
+], NATIONALITIES, "no", "pt", "nationality"));
 
 GENERATED = GENERATED.concat(genMulti("quotidiano", [
   { no: "Jeg bor i {}.", pt: "Eu moro em {}." },
   { no: "Bor du i {}?", pt: "Moras em {}?" },
   { no: "Jeg bodde i {} før.", pt: "Eu morava em {} antes." },
   { no: "Hvor bor du? — Jeg bor i {}.", pt: "Onde moras? — Eu moro em {}." },
-], CITIES, "no", "pt"));
+], CITIES, "no", "pt", "city"));
 
 GENERATED = GENERATED.concat(genMulti("quotidiano", [
   { no: "Hun blir med {}.", pt: "Ela vem com {}." },
   { no: "Blir hun med {}?", pt: "Ela vem com {}?" },
   { no: "Hun ble med {} i går.", pt: "Ela veio com {} ontem." },
-], PRON_OBJ, "no", "pt"));
+], PRON_OBJ, "no", "pt", "pronoun_obj"));
 
 GENERATED = GENERATED.concat(genMulti("quotidiano", [
   { no: "Jeg spiser {} nå.", pt: "Estou a comer {} agora." },
   { no: "Spiser du {} nå?", pt: "Estás a comer {} agora?" },
   { no: "Jeg spiste {} i går.", pt: "Comi {} ontem." },
   { no: "Jeg skal spise {} snart.", pt: "Vou comer {} em breve." },
-], FOODS, "no", "pt"));
+], FOODS, "no", "pt", "food"));
 
 GENERATED = GENERATED.concat(genMulti("trabalho", [
   { no: "Jeg er {}.", pt: "Eu sou {}." },
   { no: "Er du {}?", pt: "És {}?" },
   { no: "Hva jobber du som? — Jeg er {}.", pt: "Em que trabalhas? — Eu sou {}." },
-], PROFESSIONS, "no", "pt"));
+], PROFESSIONS, "no", "pt", "profession"));
 
 GENERATED = GENERATED.concat(genMulti("trabalho", [
   { no: "Jeg søker jobb som {}.", pt: "Procuro emprego como {}." },
   { no: "Søker du jobb som {}?", pt: "Procuras emprego como {}?" },
   { no: "Jeg søkte jobb som {} i fjor.", pt: "Procurei emprego como {} no ano passado." },
-], PROFESSIONS, "no", "pt"));
+], PROFESSIONS, "no", "pt", "profession"));
 
 GENERATED = GENERATED.concat(genMulti("trabalho", [
   { no: "Jeg flytter til Norge om {} måneder.", pt: "Eu mudo-me para a Noruega daqui a {} meses." },
   { no: "Flytter du til Norge om {} måneder?", pt: "Mudas-te para a Noruega daqui a {} meses?" },
   { no: "Jeg skal flytte til Norge om {} måneder.", pt: "Vou mudar-me para a Noruega daqui a {} meses." },
-], MONTHS_NUM, "no", "pt"));
+], MONTHS_NUM, "no", "pt", "number"));
 
 GENERATED = GENERATED.concat(genMulti("viagem", [
   { no: "Jeg reiser til {}.", pt: "Eu vou viajar {}." },
   { no: "Reiser du til {}?", pt: "Vais viajar {}?" },
   { no: "Jeg reiste til {} i fjor.", pt: "Viajei {} no ano passado." },
   { no: "Jeg skal reise til {} snart.", pt: "Vou viajar {} em breve." },
-], COUNTRIES, "no", "pt_para"));
+], COUNTRIES, "no", "pt_para", "country"));
 
 GENERATED = GENERATED.concat(genMulti("viagem", [
   { no: "Har du husket {}?", pt: "Lembraste-te de trazer {}?" },
   { no: "Jeg har husket {}.", pt: "Lembrei-me de trazer {}." },
   { no: "Husket du {} i går?", pt: "Lembraste-te de {} ontem?" },
-], BAGAGEM, "no", "pt"));
+], BAGAGEM, "no", "pt", "luggage"));
 
 GENERATED = GENERATED.concat(genMulti("conversacao", [
   { no: "Vi snakker om {}.", pt: "Nós falamos sobre {}." },
   { no: "Snakker dere om {}?", pt: "Vocês falam sobre {}?" },
   { no: "Vi snakket om {} i går.", pt: "Falámos sobre {} ontem." },
-], TOPICS, "no", "pt"));
+], TOPICS, "no", "pt", "topic"));
 
 GENERATED = GENERATED.concat(genMulti("conversacao", [
   { no: "Kan vi snakke om {}?", pt: "Podemos falar sobre {}?" },
   { no: "Kunne vi snakke om {} i går?", pt: "Pudemos falar sobre {} ontem?" },
-], TOPICS, "no", "pt"));
+], TOPICS, "no", "pt", "topic"));
 
 GENERATED = GENERATED.concat(genMulti("geral", [
   { no: "Dette er en {}.", pt: "Isto é {}." },
   { no: "Er dette en {}?", pt: "Isto é {}?" },
   { no: "{} er her.", pt: "{} está aqui." },
-], OBJETOS, "no", "pt"));
+], OBJETOS, "no", "pt", "object"));
 
 GENERATED = GENERATED.concat(genMulti("transporte", [
   { no: "Når kommer {}?", pt: "Quando chega {}?" },
   { no: "Når kom {}?", pt: "Quando chegou {}?" },
-], VEICULOS_DEF, "no", "pt"));
+], VEICULOS_DEF, "no", "pt", "vehicle_def"));
 
 GENERATED = GENERATED.concat(genMulti("transporte", [
   { no: "Jeg reiser med {}.", pt: "Eu viajo de {}." },
   { no: "Reiser du med {}?", pt: "Viajas de {}?" },
   { no: "Jeg reiste med {} i går.", pt: "Viajei de {} ontem." },
-], VEICULOS_BARE, "no", "pt"));
+], VEICULOS_BARE, "no", "pt", "vehicle_bare"));
 
 GENERATED = GENERATED.concat(genMulti("bolig", [
   { no: "Leiligheten har {}.", pt: "O apartamento tem {}." },
   { no: "Har leiligheten {}?", pt: "O apartamento tem {}?" },
-], BOLIG_COMODIDADES, "no", "pt"));
+], BOLIG_COMODIDADES, "no", "pt", "housing_amenity"));
 
 GENERATED = GENERATED.concat(genMulti("bolig", [
   { no: "Husleien er {} kroner i måneden.", pt: "A renda é de {} coroas por mês." },
   { no: "Er husleien {} kroner i måneden?", pt: "A renda é de {} coroas por mês?" },
-], HUSLEIE_VALORES, "no", "pt"));
+], HUSLEIE_VALORES, "no", "pt", "rent_value"));
 
 GENERATED = GENERATED.concat(genMulti("jobbsoking", [
   { no: "Jeg søker jobb som {}.", pt: "Procuro emprego como {}." },
   { no: "Søker du jobb som {}?", pt: "Procuras emprego como {}?" },
-], PROFESSIONS, "no", "pt"));
+], PROFESSIONS, "no", "pt", "profession"));
 
 GENERATED = GENERATED.concat(genMulti("jobbsoking", [
   { no: "Har du erfaring som {}?", pt: "Tens experiência como {}?" },
   { no: "Jeg har erfaring som {}.", pt: "Tenho experiência como {}." },
-], PROFESSIONS, "no", "pt"));
+], PROFESSIONS, "no", "pt", "profession"));
 
 GENERATED = GENERATED.concat(genMulti("industri", [
   { no: "Har du {} med deg?", pt: "Tens {} contigo?" },
   { no: "Jeg har {} med meg.", pt: "Tenho {} comigo." },
   { no: "Hadde du {} med deg i går?", pt: "Tinhas {} contigo ontem?" },
-], EQUIPAMENTO, "no", "pt"));
+], EQUIPAMENTO, "no", "pt", "equipment"));
 
 GENERATED = GENERATED.concat(genMulti("industri", [
   { no: "Jeg jobber på {}.", pt: "Eu trabalho n{}." },
   { no: "Jobber du på {}?", pt: "Trabalhas n{}?" },
   { no: "Jeg jobbet på {} i går.", pt: "Trabalhei n{} ontem." },
-], LOCAIS_INDUSTRI, "no", "pt"));
+], LOCAIS_INDUSTRI, "no", "pt", "workplace"));
+
+// ---- Bancos extra para os temas que tinham ficado com pouco conteúdo:
+// básico, cumprimentos, números, restaurante ----
+const PRONOMES_SUJEITO = [
+  { no: "Jeg", pt_bor: "Eu moro em Oslo.", pt_bor_q: "Moras em Oslo?", pt_bor_pas: "Eu morava em Oslo antes.",
+    pt_job: "Eu trabalho na Noruega.", pt_job_q: "Trabalhas na Noruega?" },
+  { no: "Du", pt_bor: "Tu moras em Oslo.", pt_bor_q: "Moras em Oslo?", pt_bor_pas: "Tu moravas em Oslo antes.",
+    pt_job: "Tu trabalhas na Noruega.", pt_job_q: "Trabalhas na Noruega?" },
+  { no: "Han", pt_bor: "Ele mora em Oslo.", pt_bor_q: "Ele mora em Oslo?", pt_bor_pas: "Ele morava em Oslo antes.",
+    pt_job: "Ele trabalha na Noruega.", pt_job_q: "Ele trabalha na Noruega?" },
+  { no: "Hun", pt_bor: "Ela mora em Oslo.", pt_bor_q: "Ela mora em Oslo?", pt_bor_pas: "Ela morava em Oslo antes.",
+    pt_job: "Ela trabalha na Noruega.", pt_job_q: "Ela trabalha na Noruega?" },
+  { no: "Vi", pt_bor: "Nós moramos em Oslo.", pt_bor_q: "Vocês moram em Oslo?", pt_bor_pas: "Nós morávamos em Oslo antes.",
+    pt_job: "Nós trabalhamos na Noruega.", pt_job_q: "Vocês trabalham na Noruega?" },
+  { no: "Dere", pt_bor: "Vocês moram em Oslo.", pt_bor_q: "Vocês moram em Oslo?", pt_bor_pas: "Vocês moravam em Oslo antes.",
+    pt_job: "Vocês trabalham na Noruega.", pt_job_q: "Vocês trabalham na Noruega?" },
+  { no: "De", pt_bor: "Eles moram em Oslo.", pt_bor_q: "Eles moram em Oslo?", pt_bor_pas: "Eles moravam em Oslo antes.",
+    pt_job: "Eles trabalham na Noruega.", pt_job_q: "Eles trabalham na Noruega?" },
+];
+GENERATED = GENERATED.concat(genMulti("basico", [{ no: "{} bor i Oslo.", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_bor", "pronoun_subj"));
+GENERATED = GENERATED.concat(genMulti("basico", [{ no: "Bor {} i Oslo?", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_bor_q", "pronoun_subj"));
+GENERATED = GENERATED.concat(genMulti("basico", [{ no: "{} bodde i Oslo før.", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_bor_pas", "pronoun_subj"));
+GENERATED = GENERATED.concat(genMulti("basico", [{ no: "{} jobber i Norge.", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_job", "pronoun_subj"));
+GENERATED = GENERATED.concat(genMulti("basico", [{ no: "Jobber {} i Norge?", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_job_q", "pronoun_subj"));
+
+const NUMEROS_BANK = [
+  { no: "en", pt: "um" }, { no: "to", pt: "dois" }, { no: "tre", pt: "três" }, { no: "fire", pt: "quatro" },
+  { no: "fem", pt: "cinco" }, { no: "seks", pt: "seis" }, { no: "sju", pt: "sete" }, { no: "åtte", pt: "oito" },
+  { no: "ni", pt: "nove" }, { no: "ti", pt: "dez" }, { no: "tolv", pt: "doze" }, { no: "tjue", pt: "vinte" },
+];
+GENERATED = GENERATED.concat(genMulti("numeros", [
+  { no: "Klokka er ___.", pt: "São {} horas." },
+  { no: "Hva er klokka? — Den er ___.", pt: "Que horas são? — São {} horas." },
+], NUMEROS_BANK, "no", "pt", "number"));
+GENERATED = GENERATED.concat(genMulti("numeros", [
+  { no: "Jeg har ___ barn.", pt: "Tenho {} filhos." },
+  { no: "Har du ___ barn?", pt: "Tens {} filhos?" },
+], NUMEROS_BANK, "no", "pt", "number"));
+GENERATED = GENERATED.concat(genMulti("numeros", [
+  { no: "Det koster ___ kroner.", pt: "Custa {} coroas." },
+  { no: "Koster det ___ kroner?", pt: "Custa {} coroas?" },
+], NUMEROS_BANK, "no", "pt", "number"));
+
+const DAYPARTS = [
+  { no: "morgen", pt: "Bom dia!" }, { no: "kveld", pt: "Boa noite!" },
+  { no: "dag", pt: "Tenha um bom dia!" }, { no: "helg", pt: "Bom fim de semana!" },
+];
+GENERATED = GENERATED.concat(genMulti("cumprimentos", [{ no: "God ___!", pt: "{}" }], DAYPARTS, "no", "pt", "daypart"));
+
+const CUMPRIMENTOS_VERBOS = [
+  { no: "hilser", pt: "cumprimenta" }, { no: "smiler", pt: "sorri" }, { no: "vinker", pt: "acena" },
+];
+GENERATED = GENERATED.concat(genMulti("cumprimentos", [
+  { no: "Han ___ på meg.", pt: "Ele {} para mim." },
+  { no: "___ han på meg?", pt: "Ele {} para mim?" },
+], CUMPRIMENTOS_VERBOS, "no", "pt", "greeting_verb"));
+
+const MENU_ITENS = [
+  { no: "brød", pt: "pão" }, { no: "egg", pt: "ovos" }, { no: "fisk", pt: "peixe" }, { no: "suppe", pt: "sopa" },
+  { no: "ris", pt: "arroz" }, { no: "salat", pt: "salada" }, { no: "frukt", pt: "fruta" }, { no: "kylling", pt: "frango" },
+];
+GENERATED = GENERATED.concat(genMulti("restaurante", [
+  { no: "Jeg vil gjerne ha ___.", pt: "Gostava de ter {}." },
+  { no: "Vil du ha ___?", pt: "Queres {}?" },
+], MENU_ITENS, "no", "pt", "food"));
+
+const DRIKKE = [
+  { no: "kaffe", pt: "café" }, { no: "te", pt: "chá" }, { no: "vann", pt: "água" },
+  { no: "øl", pt: "cerveja" }, { no: "vin", pt: "vinho" }, { no: "juice", pt: "sumo" }, { no: "brus", pt: "refrigerante" },
+];
+GENERATED = GENERATED.concat(genMulti("restaurante", [
+  { no: "Kan jeg få litt ___?", pt: "Posso ter um pouco de {}?" },
+  { no: "Jeg drikker ___.", pt: "Eu bebo {}." },
+], DRIKKE, "no", "pt", "drink"));
 
 GENERATED = GENERATED.map((it, i) => ({ id: "gen-" + i, level: 1, ...it }));
 
 // Frases fixas — texto idiomático que não se presta bem a gerar por molde
 // (o teu ficheiro original de 20 pares + frases de finn.no e indústria).
 const CURATED_EXTRA = [
-  { theme: "apresentacao", blank: "___ kommer du fra?", answer: "Hvor", pt: "De onde és?" },
+  { theme: "apresentacao", blank: "___ kommer du fra?", answer: "Hvor", pt: "De onde és?", options: ["Hvor", "Hva", "Hvem", "Når", "Hvordan"] },
   { theme: "apresentacao", blank: "Jeg kommer fra ___.", answer: "Portugal", pt: "Eu venho de Portugal." },
   { theme: "quotidiano", blank: "Jeg bor i ___.", answer: "Oslo", pt: "Eu moro em Oslo." },
   { theme: "trabalho", blank: "Jeg er på ___.", answer: "jobb", pt: "Eu estou no trabalho." },
@@ -646,10 +747,10 @@ const CURATED_EXTRA = [
   { theme: "viagem", blank: "Væsken må være i ___ på maksimalt 100 ml.", answer: "beholdere", pt: "O líquido tem de estar em recipientes de no máximo 100 ml." },
   { theme: "viagem", blank: "Beholderne må passe i én ___.", answer: "plastpose", pt: "Os recipientes têm de caber num saco de plástico." },
   { theme: "viagem", blank: "___ gjelder for babymat og medisiner.", answer: "Unntak", pt: "Aplicam-se exceções para comida de bebé e medicamentos." },
-  { theme: "apresentacao", blank: "Jeg ___ David.", answer: "heter", pt: "Eu chamo-me David." },
+  { theme: "apresentacao", blank: "Jeg ___ David.", answer: "heter", pt: "Eu chamo-me David.", options: ["heter", "bor", "er", "kommer", "jobber"] },
   { theme: "quotidiano", blank: "Hun bor i ___.", answer: "Bergen", pt: "Ela mora em Bergen." },
   { theme: "transporte", blank: "Når kommer ___?", answer: "toget", pt: "Quando chega o comboio?" },
-  { theme: "conversacao", blank: "___ har du det i dag?", answer: "Hvordan", pt: "Como estás hoje?" },
+  { theme: "conversacao", blank: "___ har du det i dag?", answer: "Hvordan", pt: "Como estás hoje?", options: ["Hvordan", "Hvorfor", "Hva", "Hvem", "Når"] },
   { theme: "trabalho", blank: "Jeg ___ til Norge om seks måneder.", answer: "flytter", pt: "Eu mudo-me para a Noruega daqui a seis meses." },
 
   // ---- finn.no: arrendar habitação (bolig) ----
@@ -819,7 +920,7 @@ const GLOSS = {
   er: "é / está", har: "tem", fra: "de", til: "para", i: "em", på: "em / sobre", med: "com",
   møte: "encontrar", se: "ver", høre: "ouvir", snakke: "falar", vite: "saber",
   dag: "dia", kveld: "noite / entardecer", uke: "semana", jobb: "trabalho", tur: "passeio",
-  sees: "vemo-nos", snakkes: "falamo-nos", møtes: "encontramo-nos", ringer: "liga / telefona", går: "vai",
+  sees: "vemo-nos", snakkes: "falamo-nos", møtes: "encontramo-nos", ringer: "liga / telefona", går: "vai / anda a pé",
   ja: "sim", nei: "não", kanskje: "talvez", takk: "obrigado", vær: "sê / está (imperativo)",
   kan: "consigo / sei", vil: "quero", skal: "vou / devo", må: "tenho de",
   to: "dois", tre: "três", en: "um", fire: "quatro", fem: "cinco", sju: "sete", åtte: "oito",
@@ -836,6 +937,11 @@ const GLOSS = {
   sikringen: "o fusível", lyset: "a luz", kabelen: "o cabo", målet: "o medidor / objetivo", planen: "o plano",
   verktøy: "ferramentas", penger: "dinheiro", tid: "tempo", hjelp: "ajuda", papir: "papel",
   forsiktig: "cuidadoso", rask: "rápido", sterk: "forte", høy: "alto", stille: "silencioso", barn: "filhos / crianças",
+  koster: "custa", vet: "sabe", toget: "o comboio", bilen: "o carro", sykkel: "bicicleta", sykkelen: "a bicicleta",
+  ingeniør: "engenheiro", butikkmedarbeider: "empregado de loja", renholder: "empregado de limpeza",
+  lagermedarbeider: "trabalhador de armazém", maler: "pintor", rørlegger: "canalizador", sier: "diz",
+  kommer: "vem", flytte: "mudar-se", tom: "vazio", fylle: "encher", beholdere: "recipientes",
+  plastpose: "saco de plástico", unntak: "exceções", vannflasken: "a garrafa de água",
 };
 
 // Looks up a word's meaning: checks the built-in glossary first, then falls back
@@ -947,24 +1053,63 @@ function getThemes() {
   return THEMES.concat(customThemes);
 }
 
+// Escolhe distractors plausíveis a partir de uma lista de itens candidatos.
+// Prioridade 1: candidatos da MESMA CATEGORIA lexical (item.cat) — ex.: só
+// profissões contra profissões, só números contra números — para nunca
+// misturar "ingeniør" com "seks" ou "sju" só porque calharam no mesmo tema.
+// Prioridade 2 (sem categoria, ou poucos candidatos da mesma): pontua por
+// semelhança de "forma" (nº de palavras e comprimento) como aproximação.
+function pickDistractors(item, candidates, count) {
+  const answer = item.answer;
+  const targetWords = answer.trim().split(/\s+/).length;
+  const seen = new Set([answer.toLowerCase()]);
+  const scoreOf = (val) => {
+    const words = val.trim().split(/\s+/).length;
+    const wordMatch = words === targetWords ? 2 : 0;
+    const lenDiff = Math.abs(val.length - answer.length);
+    const lenScore = Math.max(0, 3 - Math.floor(lenDiff / 3));
+    return wordMatch + lenScore;
+  };
+  let pool = [];
+  if (item.cat) {
+    for (const c of candidates) {
+      if (c.cat !== item.cat) continue;
+      const val = c.answer;
+      if (seen.has(val.toLowerCase())) continue;
+      seen.add(val.toLowerCase());
+      pool.push(val);
+    }
+  }
+  // Categoria não deu candidatos suficientes: completa com o resto, ordenado por forma.
+  if (pool.length < count) {
+    const rest = [];
+    for (const c of candidates) {
+      const val = c.answer;
+      if (seen.has(val.toLowerCase())) continue;
+      seen.add(val.toLowerCase());
+      rest.push(val);
+    }
+    const scoredRest = shuffle(rest)
+      .map(val => ({ val, score: scoreOf(val) }))
+      .sort((a, b) => b.score - a.score)
+      .map(s => s.val);
+    pool = pool.concat(scoredRest);
+  } else {
+    pool = shuffle(pool);
+  }
+  return pool.slice(0, count);
+}
+
 // Builds multiple-choice options for an item. Built-in items already ship with
 // curated distractors; custom items only have an answer, so we auto-generate
-// plausible wrong answers by sampling other answers from the same theme.
+// plausible wrong answers by sampling other answers from the same theme,
+// preferindo opções da mesma categoria/"forma" que a resposta certa.
 function optionsFor(item) {
   if (item.options && item.options.length >= 2) return shuffle(item.options);
   const others = allItems().filter(i => i.answer.toLowerCase() !== item.answer.toLowerCase());
   const sameTheme = others.filter(i => i.theme === item.theme);
   const source = sameTheme.length >= 4 ? sameTheme : others;
-  const seen = new Set([item.answer.toLowerCase()]);
-  const distractors = [];
-  for (const i of shuffle(source)) {
-    const val = i.answer;
-    if (!seen.has(val.toLowerCase())) {
-      seen.add(val.toLowerCase());
-      distractors.push(val);
-    }
-    if (distractors.length >= 4) break;
-  }
+  const distractors = pickDistractors(item, source, 4);
   return shuffle([item.answer, ...distractors]);
 }
 
@@ -975,15 +1120,10 @@ function optionsFor(item) {
 // que as opções erradas sejam sempre as mesmas e óbvias por repetição.
 function optionsForTest(item, poolItems) {
   const source = poolItems.filter(i => i.answer.toLowerCase() !== item.answer.toLowerCase());
-  const seen = new Set([item.answer.toLowerCase()]);
-  const distractors = [];
-  for (const i of shuffle(source)) {
-    const val = i.answer;
-    if (!seen.has(val.toLowerCase())) { seen.add(val.toLowerCase()); distractors.push(val); }
-    if (distractors.length >= 4) break;
-  }
+  const distractors = pickDistractors(item, source, 4);
   // Pool pequena demais para 4 distractors: completa com as opções curadas do item, se existirem.
   if (distractors.length < 3 && item.options) {
+    const seen = new Set([item.answer.toLowerCase(), ...distractors.map(d => d.toLowerCase())]);
     for (const o of item.options) {
       if (distractors.length >= 4) break;
       if (!seen.has(o.toLowerCase())) { seen.add(o.toLowerCase()); distractors.push(o); }
@@ -1054,7 +1194,8 @@ function getRecognition() {
 // ---------- State ----------
 let currentTab = "news";
 let currentTheme = "basico";
-let practiceIdx = loadPracticeIdx("basico"), exerciseOptions = null, writeIdx = 0;
+let practiceIdx = loadPracticeIdx("basico"), exerciseOptions = null, writeIdx = 0, writeQIdx = 0;
+let writeMode = "recall", writeRevealed = false;
 let listening = false, heard = "", result = null, micError = "", showPhonetic = false;
 let recInstance = null;
 let exSelected = null;
@@ -1226,7 +1367,7 @@ function renderThemeTabs() {
       if (b.dataset.theme === currentTheme) return;
       currentTheme = b.dataset.theme;
       practiceIdx = loadPracticeIdx(currentTheme);
-      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0;
+      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0; writeQIdx = 0; writeRevealed = false;
       exSelected = null; exerciseOptions = null;
       testState = { running: false, set: [], idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
       render();
@@ -1384,13 +1525,85 @@ function renderWrite() {
   if (!p.length) {
     return `<div class="card center-card"><p class="translation">Ainda não há frases neste tema.</p></div>`;
   }
+
+  const modeBar = (qaCount) => `
+    <div class="btn-row" style="margin-bottom:16px;flex-wrap:wrap">
+      <button class="tab-btn ${writeMode === "recall" ? "active" : ""}" id="btnWriteModeRecall">🧠 Memória</button>
+      <button class="tab-btn ${writeMode === "question" ? "active" : ""}" id="btnWriteModeQuestion">❓ Pensar a pergunta${qaCount ? "" : " (0)"}</button>
+      <button class="tab-btn ${writeMode === "copy" ? "active" : ""}" id="btnWriteModeCopy">📋 Copiar (caligrafia)</button>
+    </div>`;
+
+  // ---- Modo "Pensar a pergunta": mostra só a resposta, tens de escrever a pergunta ----
+  if (writeMode === "question") {
+    const qaItems = p.map(splitQA).map((qa, i) => qa ? { qa, item: p[i] } : null).filter(Boolean);
+    if (!qaItems.length) {
+      return `
+        <div class="card">
+          ${modeBar(0)}
+          <p class="translation">Este tema ainda não tem frases no formato "pergunta — resposta", por isso não há nada para praticar neste modo aqui. Escolhe outro tema (ex.: Quotidiano, Apresentação, Trabalho) ou muda de modo.</p>
+        </div>`;
+    }
+    if (writeQIdx >= qaItems.length) writeQIdx = 0;
+    const { qa } = qaItems[writeQIdx];
+    return `
+      <div class="card">
+        <p class="card-label mono">pensar a pergunta ${writeQIdx + 1} de ${qaItems.length}</p>
+        ${modeBar(qaItems.length)}
+        <p class="sentence display">${qa.answer}</p>
+        <p class="translation" style="margin-bottom:16px">${qa.ptAnswer}</p>
+        <p class="note" style="margin-bottom:16px">Escreve, de memória, a PERGUNTA em norueguês que levaria a esta resposta.</p>
+        <div class="canvas-wrap"><canvas id="writeCanvas"></canvas></div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn" id="btnClearCanvas">🧹 Limpar</button>
+          <button class="btn" id="btnWriteReveal">${writeRevealed ? "🙈 Esconder" : "👁️ Ver pergunta certa"}</button>
+        </div>
+        ${writeRevealed ? `
+          <div class="gloss-block" style="margin-top:12px">
+            <p class="sentence display" style="font-size:18px">${qa.question}</p>
+            <p class="translation">${qa.ptQuestion}</p>
+            <button class="btn listen" id="btnWriteOuvir" style="margin-top:8px">🔊 Ouvir</button>
+          </div>` : ""}
+        <button class="btn next" id="btnWriteNext" style="margin-top:16px">Próxima →</button>
+      </div>
+      <p class="note">Modo pergunta: obriga-te a pensar em como se pergunta algo em norueguês, não só a copiar a resposta.</p>
+    `;
+  }
+
+  // ---- Modo "Memória": só vês a tradução, tens de escrever a frase toda de cor ----
+  if (writeMode === "recall") {
+    if (writeIdx >= p.length) writeIdx = 0;
+    const item = p[writeIdx];
+    const target = fullSentence(item);
+    return `
+      <div class="card">
+        <p class="card-label mono">escrever de memória ${writeIdx + 1} de ${p.length}</p>
+        ${modeBar(p.filter(splitQA).length)}
+        <p class="translation" style="font-size:18px;margin-bottom:16px">${item.pt}</p>
+        <p class="note" style="margin-bottom:16px">Escreve a frase completa em norueguês, de memória — sem espreitar.</p>
+        <div class="canvas-wrap"><canvas id="writeCanvas"></canvas></div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn" id="btnClearCanvas">🧹 Limpar</button>
+          <button class="btn" id="btnWriteReveal">${writeRevealed ? "🙈 Esconder" : "👁️ Ver resposta"}</button>
+        </div>
+        ${writeRevealed ? `
+          <div class="gloss-block" style="margin-top:12px">
+            <p class="sentence display" style="font-size:18px">${target}</p>
+            <button class="btn listen" id="btnWriteOuvir" style="margin-top:8px">🔊 Ouvir</button>
+          </div>` : ""}
+        <button class="btn next" id="btnWriteNext" style="margin-top:16px">Próxima frase →</button>
+      </div>
+      <p class="note">Modo memória: não vês a frase em norueguês antes de a escreveres — só depois, quando carregares em "Ver resposta".</p>
+    `;
+  }
+
+  // ---- Modo "Copiar": o comportamento original, bom para treinar o traço/ortografia ----
   if (writeIdx >= p.length) writeIdx = 0;
   const item = p[writeIdx];
   const target = fullSentence(item);
-
   return `
     <div class="card">
-      <p class="card-label mono">escrever ${writeIdx + 1} de ${p.length}</p>
+      <p class="card-label mono">copiar ${writeIdx + 1} de ${p.length}</p>
+      ${modeBar(p.filter(splitQA).length)}
       <p class="sentence display">${target}</p>
       <p class="translation" style="margin-bottom:16px">${item.pt}</p>
       <div class="btn-row" style="margin-bottom:16px">
@@ -1450,7 +1663,11 @@ function renderExercises() {
       <p class="sentence display">${item.blank}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
-      ${exSelected ? `<div class="gloss-block">${exerciseOptions.list.map(o => `<p class="gloss-line"><b>${o}</b> — ${glossFor(o) || "significado não disponível"}</p>`).join("")}</div>` : ""}
+      ${exSelected ? `<div class="gloss-block">
+        <p class="mono" style="font-size:11px;color:var(--muted);margin:0 0 8px">significado literal de cada palavra (a tradução da frase acima é o sentido natural em português, não uma tradução palavra a palavra):</p>
+        ${exerciseOptions.list.map(o => `<p class="gloss-line"><b>${o}</b> — ${glossFor(o) || "significado não disponível"}</p>`).join("")}
+        ${(item.cat === "vehicle_def" || item.cat === "vehicle_bare") ? `<p class="mono" style="font-size:11px;color:var(--muted);margin:8px 0 0">💡 em norueguês, o sufixo <b>-en/-a/-et</b> no fim da palavra forma o "definido" (ex.: <i>sykkelen</i> = a bicicleta); sem sufixo é a forma indefinida (<i>sykkel</i> = uma bicicleta).</p>` : ""}
+      </div>` : ""}
       ${exSelected ? `<button class="btn next" id="btnExNext" style="margin-top:16px">${isLive && exSelected !== item.answer ? "Tentar de novo (mesma pergunta) →" : "Próxima →"}</button>` : ""}
       <div class="nav-row" style="display:flex;gap:8px;align-items:center;margin-top:16px">
         <button class="news-icon-btn" id="btnExPrev" ${viewIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
@@ -1599,10 +1816,29 @@ function attachHandlers() {
     };
   }
   if (currentTab === "write") {
+    const btnModeRecall = document.getElementById("btnWriteModeRecall");
+    if (btnModeRecall) btnModeRecall.onclick = () => { writeMode = "recall"; writeRevealed = false; render(); };
+    const btnModeQuestion = document.getElementById("btnWriteModeQuestion");
+    if (btnModeQuestion) btnModeQuestion.onclick = () => { writeMode = "question"; writeRevealed = false; render(); };
+    const btnModeCopy = document.getElementById("btnWriteModeCopy");
+    if (btnModeCopy) btnModeCopy.onclick = () => { writeMode = "copy"; writeRevealed = false; render(); };
+
+    const btnWriteReveal = document.getElementById("btnWriteReveal");
+    if (btnWriteReveal) btnWriteReveal.onclick = () => { writeRevealed = !writeRevealed; render(); };
+
     const btnWriteOuvir = document.getElementById("btnWriteOuvir");
     if (btnWriteOuvir) btnWriteOuvir.onclick = () => {
-      const p = pool(); const item = p[writeIdx % p.length];
-      speak(fullSentence(item), () => {});
+      const p = pool();
+      if (writeMode === "question") {
+        const qaItems = p.map(splitQA).filter(Boolean);
+        if (!qaItems.length) return;
+        const qa = qaItems[writeQIdx % qaItems.length];
+        speak(qa.question, () => {});
+      } else {
+        if (!p.length) return;
+        const item = p[writeIdx % p.length];
+        speak(fullSentence(item), () => {});
+      }
     };
     const canvas = document.getElementById("writeCanvas");
     if (canvas) setupCanvas(canvas);
@@ -1613,8 +1849,15 @@ function attachHandlers() {
     };
     const btnWriteNext = document.getElementById("btnWriteNext");
     if (btnWriteNext) btnWriteNext.onclick = () => {
-      const p = pool();
-      writeIdx = p.length ? (writeIdx + 1) % p.length : 0;
+      writeRevealed = false;
+      if (writeMode === "question") {
+        const p = pool();
+        const qaCount = p.map(splitQA).filter(Boolean).length;
+        writeQIdx = qaCount ? (writeQIdx + 1) % qaCount : 0;
+      } else {
+        const p = pool();
+        writeIdx = p.length ? (writeIdx + 1) % p.length : 0;
+      }
       render();
     };
   }
