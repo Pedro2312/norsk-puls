@@ -376,8 +376,207 @@ const THEMES = [
   { id: "numeros", label: "🔢 Números" },
   { id: "restaurante", label: "🍽️ Restaurante" },
   { id: "trabalho", label: "🔧 Trabalho" },
+  { id: "apresentacao", label: "🙋 Apresentação" },
+  { id: "quotidiano", label: "🗓️ Quotidiano" },
+  { id: "viagem", label: "✈️ Viagem" },
+  { id: "conversacao", label: "💬 Conversação" },
+  { id: "geral", label: "✨ Geral" },
+  { id: "transporte", label: "🚌 Transporte" },
+  { id: "bolig", label: "🏠 Bolig (arrendar)" },
+  { id: "jobbsoking", label: "💼 Jobbsøking" },
+  { id: "industri", label: "🏭 Indústria" },
 ];
 const fullSentence = (item) => item.blank.replace("___", item.answer);
+
+// ==================================================================
+// MOTOR DE GERAÇÃO: banco de vocabulário + moldes de frase.
+// Em vez de escrever centenas de frases à mão (frágil e difícil de manter),
+// cada tema combina um pequeno banco de palavras com 1-3 moldes de frase.
+// O produto das combinações dá uma baralho bem maior, sem repetição maçadora,
+// e continua fácil de rever/corrigir uma palavra sem mexer em tudo.
+// ==================================================================
+function genFromBank(theme, no_template, pt_template, bank, noField, ptField) {
+  return bank.map(w => ({
+    theme,
+    blank: no_template.replace("{}", "___"),
+    answer: w[noField],
+    pt: pt_template.replace("{}", w[ptField]),
+  }));
+}
+
+const COUNTRIES = [
+  { no: "Portugal", pt_de: "de Portugal", pt_para: "para Portugal" },
+  { no: "Norge", pt_de: "da Noruega", pt_para: "para a Noruega" },
+  { no: "Spania", pt_de: "da Espanha", pt_para: "para a Espanha" },
+  { no: "Brasil", pt_de: "do Brasil", pt_para: "para o Brasil" },
+  { no: "Sverige", pt_de: "da Suécia", pt_para: "para a Suécia" },
+  { no: "Danmark", pt_de: "da Dinamarca", pt_para: "para a Dinamarca" },
+  { no: "Polen", pt_de: "da Polónia", pt_para: "para a Polónia" },
+  { no: "Ukraina", pt_de: "da Ucrânia", pt_para: "para a Ucrânia" },
+  { no: "Tyskland", pt_de: "da Alemanha", pt_para: "para a Alemanha" },
+  { no: "Italia", pt_de: "da Itália", pt_para: "para a Itália" },
+  { no: "Frankrike", pt_de: "da França", pt_para: "para a França" },
+  { no: "England", pt_de: "da Inglaterra", pt_para: "para a Inglaterra" },
+];
+const CITIES = [
+  { no: "Oslo", pt: "Oslo" }, { no: "Bergen", pt: "Bergen" }, { no: "Sarpsborg", pt: "Sarpsborg" },
+  { no: "Asker", pt: "Asker" }, { no: "Askim", pt: "Askim" }, { no: "Trondheim", pt: "Trondheim" },
+  { no: "Stavanger", pt: "Stavanger" }, { no: "Tromsø", pt: "Tromsø" }, { no: "Fredrikstad", pt: "Fredrikstad" },
+  { no: "Drammen", pt: "Drammen" },
+];
+const PRON_OBJ = [
+  { no: "meg", pt: "mim" }, { no: "deg", pt: "ti" }, { no: "ham", pt: "ele" },
+  { no: "henne", pt: "ela" }, { no: "oss", pt: "nós" }, { no: "dem", pt: "eles" },
+];
+const FOODS = [
+  { no: "brød", pt: "pão" }, { no: "egg", pt: "ovos" }, { no: "fisk", pt: "peixe" },
+  { no: "suppe", pt: "sopa" }, { no: "ris", pt: "arroz" }, { no: "salat", pt: "salada" },
+  { no: "frukt", pt: "fruta" }, { no: "kylling", pt: "frango" },
+];
+const PROFESSIONS = [
+  { no: "elektriker", pt: "eletricista" }, { no: "lærer", pt: "professor" }, { no: "sykepleier", pt: "enfermeiro" },
+  { no: "ingeniør", pt: "engenheiro" }, { no: "snekker", pt: "carpinteiro" }, { no: "kokk", pt: "cozinheiro" },
+  { no: "sjåfør", pt: "motorista" }, { no: "renholder", pt: "empregado de limpeza" },
+  { no: "butikkmedarbeider", pt: "empregado de loja" }, { no: "lagermedarbeider", pt: "trabalhador de armazém" },
+  { no: "maler", pt: "pintor" }, { no: "rørlegger", pt: "canalizador" },
+];
+const MONTHS_NUM = [
+  { no: "tre", pt: "três" }, { no: "fire", pt: "quatro" }, { no: "fem", pt: "cinco" },
+  { no: "seks", pt: "seis" }, { no: "sju", pt: "sete" }, { no: "åtte", pt: "oito" },
+  { no: "ni", pt: "nove" }, { no: "ti", pt: "dez" },
+];
+const BAGAGEM = [
+  { no: "pass", pt: "o passaporte" }, { no: "billett", pt: "o bilhete" }, { no: "koffert", pt: "a mala" },
+  { no: "ryggsekk", pt: "a mochila" }, { no: "veske", pt: "a bolsa" },
+];
+const TOPICS = [
+  { no: "Norge", pt: "a Noruega" }, { no: "jobben", pt: "o trabalho" }, { no: "været", pt: "o tempo" },
+  { no: "familien", pt: "a família" }, { no: "maten", pt: "a comida" }, { no: "skolen", pt: "a escola" },
+  { no: "fotball", pt: "futebol" }, { no: "filmer", pt: "filmes" }, { no: "musikk", pt: "música" },
+  { no: "nyhetene", pt: "as notícias" },
+];
+const OBJETOS = [
+  { no: "bok", pt: "um livro" }, { no: "avis", pt: "um jornal" }, { no: "penn", pt: "uma caneta" },
+  { no: "stol", pt: "uma cadeira" }, { no: "lampe", pt: "um candeeiro" }, { no: "nøkkel", pt: "uma chave" },
+  { no: "veske", pt: "uma mala" }, { no: "klokke", pt: "um relógio" }, { no: "kopp", pt: "uma chávena" },
+  { no: "paraply", pt: "um guarda-chuva" },
+];
+const VEICULOS_DEF = [
+  { no: "toget", pt: "o comboio" }, { no: "bussen", pt: "o autocarro" }, { no: "bilen", pt: "o carro" },
+  { no: "sykkelen", pt: "a bicicleta" }, { no: "flyet", pt: "o avião" }, { no: "fergen", pt: "o ferry" },
+  { no: "trikken", pt: "o elétrico" }, { no: "T-banen", pt: "o metro" },
+];
+const VEICULOS_BARE = [
+  { no: "tog", pt: "comboio" }, { no: "buss", pt: "autocarro" }, { no: "bil", pt: "carro" },
+  { no: "sykkel", pt: "bicicleta" }, { no: "fly", pt: "avião" }, { no: "ferge", pt: "ferry" },
+  { no: "trikk", pt: "elétrico" }, { no: "T-bane", pt: "metro" },
+];
+const BOLIG_COMODIDADES = [
+  { no: "balkong", pt: "uma varanda" }, { no: "parkeringsplass", pt: "um lugar de estacionamento" },
+  { no: "peis", pt: "uma lareira" }, { no: "heis", pt: "um elevador" }, { no: "vaskemaskin", pt: "uma máquina de lavar roupa" },
+  { no: "oppvaskmaskin", pt: "uma máquina de lavar loiça" }, { no: "hage", pt: "um jardim" }, { no: "kjeller", pt: "uma cave" },
+];
+const HUSLEIE_VALORES = [
+  { no: "8000", pt: "8000" }, { no: "9000", pt: "9000" }, { no: "10000", pt: "10 000" },
+  { no: "12000", pt: "12 000" }, { no: "15000", pt: "15 000" },
+];
+const EQUIPAMENTO = [
+  { no: "hjelm", pt: "o capacete" }, { no: "vernebriller", pt: "os óculos de proteção" },
+  { no: "arbeidshansker", pt: "as luvas de trabalho" }, { no: "sikkerhetssko", pt: "as botas de segurança" },
+  { no: "verneutstyr", pt: "o equipamento de proteção" },
+];
+const LOCAIS_INDUSTRI = [
+  { no: "lageret", pt: "o armazém" }, { no: "produksjonslinjen", pt: "a linha de produção" },
+  { no: "byggeplassen", pt: "o estaleiro" }, { no: "fabrikken", pt: "a fábrica" },
+];
+
+let GENERATED = [];
+GENERATED = GENERATED.concat(genFromBank("apresentacao", "Jeg kommer fra {}.", "Eu venho {}.", COUNTRIES, "no", "pt_de"));
+GENERATED = GENERATED.concat(genFromBank("apresentacao", "Jeg er fra {}.", "Eu sou {}.", COUNTRIES, "no", "pt_de"));
+GENERATED = GENERATED.concat(genFromBank("quotidiano", "Jeg bor i {}.", "Eu moro em {}.", CITIES, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("quotidiano", "Hun blir med {}.", "Ela vem com {}.", PRON_OBJ, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("quotidiano", "Jeg spiser {} nå.", "Estou a comer {} agora.", FOODS, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("trabalho", "Jeg er {}.", "Eu sou {}.", PROFESSIONS, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("trabalho", "Jeg søker jobb som {}.", "Procuro emprego como {}.", PROFESSIONS, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("trabalho", "Jeg flytter til Norge om {} måneder.", "Eu mudo-me para a Noruega daqui a {} meses.", MONTHS_NUM, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("viagem", "Jeg reiser til {}.", "Eu vou viajar {}.", COUNTRIES, "no", "pt_para"));
+GENERATED = GENERATED.concat(genFromBank("viagem", "Har du husket {}?", "Lembraste-te de trazer {}?", BAGAGEM, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("conversacao", "Vi snakker om {}.", "Nós falamos sobre {}.", TOPICS, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("conversacao", "Kan vi snakke om {}?", "Podemos falar sobre {}?", TOPICS, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("geral", "Dette er en {}.", "Isto é {}.", OBJETOS, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("transporte", "Når kommer {}?", "Quando chega {}?", VEICULOS_DEF, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("transporte", "Jeg reiser med {}.", "Eu viajo de {}.", VEICULOS_BARE, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("bolig", "Leiligheten har {}.", "O apartamento tem {}.", BOLIG_COMODIDADES, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("bolig", "Husleien er {} kroner i måneden.", "A renda é de {} coroas por mês.", HUSLEIE_VALORES, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("jobbsoking", "Jeg søker jobb som {}.", "Procuro emprego como {}.", PROFESSIONS, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("jobbsoking", "Har du erfaring som {}?", "Tens experiência como {}?", PROFESSIONS, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("industri", "Har du {} med deg?", "Tens {} contigo?", EQUIPAMENTO, "no", "pt"));
+GENERATED = GENERATED.concat(genFromBank("industri", "Jeg jobber på {}.", "Eu trabalho n{}.", LOCAIS_INDUSTRI, "no", "pt"));
+GENERATED = GENERATED.map((it, i) => ({ id: "gen-" + i, level: 1, ...it }));
+
+// Frases fixas — texto idiomático que não se presta bem a gerar por molde
+// (o teu ficheiro original de 20 pares + frases de finn.no e indústria).
+const CURATED_EXTRA = [
+  { theme: "apresentacao", blank: "___ kommer du fra?", answer: "Hvor", pt: "De onde és?" },
+  { theme: "apresentacao", blank: "Jeg kommer fra ___.", answer: "Portugal", pt: "Eu venho de Portugal." },
+  { theme: "quotidiano", blank: "Jeg bor i ___.", answer: "Oslo", pt: "Eu moro em Oslo." },
+  { theme: "trabalho", blank: "Jeg er på ___.", answer: "jobb", pt: "Eu estou no trabalho." },
+  { theme: "viagem", blank: "Jeg reiser til ___.", answer: "Norge", pt: "Eu vou viajar para a Noruega." },
+  { theme: "quotidiano", blank: "Hun blir ___ meg.", answer: "med", pt: "Ela vem comigo." },
+  { theme: "conversacao", blank: "Vi snakker ___ Norge.", answer: "om", pt: "Nós falamos sobre a Noruega." },
+  { theme: "geral", blank: "Dette er en ___ av Jo Nesbø.", answer: "bok", pt: "Este é um livro de Jo Nesbø." },
+  { theme: "viagem", blank: "Kan jeg ha med ___ min?", answer: "vannflasken", pt: "Posso levar a minha garrafa de água?" },
+  { theme: "conversacao", blank: "Ja, det ___ du.", answer: "kan", pt: "Sim, podes." },
+  { theme: "viagem", blank: "Den må være ___ gjennom sikkerhetskontrollen.", answer: "tom", pt: "Ela tem de estar vazia no controlo de segurança." },
+  { theme: "viagem", blank: "Du kan ___ den opp igjen etterpå.", answer: "fylle", pt: "Podes enchê-la de novo depois." },
+  { theme: "viagem", blank: "Væsken må være i ___ på maksimalt 100 ml.", answer: "beholdere", pt: "O líquido tem de estar em recipientes de no máximo 100 ml." },
+  { theme: "viagem", blank: "Beholderne må passe i én ___.", answer: "plastpose", pt: "Os recipientes têm de caber num saco de plástico." },
+  { theme: "viagem", blank: "___ gjelder for babymat og medisiner.", answer: "Unntak", pt: "Aplicam-se exceções para comida de bebé e medicamentos." },
+  { theme: "apresentacao", blank: "Jeg ___ David.", answer: "heter", pt: "Eu chamo-me David." },
+  { theme: "quotidiano", blank: "Hun bor i ___.", answer: "Bergen", pt: "Ela mora em Bergen." },
+  { theme: "transporte", blank: "Når kommer ___?", answer: "toget", pt: "Quando chega o comboio?" },
+  { theme: "conversacao", blank: "___ har du det i dag?", answer: "Hvordan", pt: "Como estás hoje?" },
+  { theme: "trabalho", blank: "Jeg ___ til Norge om seks måneder.", answer: "flytter", pt: "Eu mudo-me para a Noruega daqui a seis meses." },
+
+  // ---- finn.no: arrendar habitação (bolig) ----
+  { theme: "bolig", blank: "Depositum tilsvarer vanligvis ___ måneders husleie.", answer: "tre", pt: "A caução corresponde normalmente a três meses de renda." },
+  { theme: "bolig", blank: "___ har ansvar for at boligen er i god stand.", answer: "Utleier", pt: "O senhorio é responsável por o imóvel estar em bom estado." },
+  { theme: "bolig", blank: "Leietaker må varsle om oppsigelse minst ___ måned i forveien.", answer: "en", pt: "O inquilino deve avisar a rescisão com pelo menos um mês de antecedência." },
+  { theme: "bolig", blank: "___ bør beskrive hva som er inkludert i husleien.", answer: "Kontrakten", pt: "O contrato deve descrever o que está incluído na renda." },
+  { theme: "bolig", blank: "Boligen annonseres som ___.", answer: "møblert", pt: "O imóvel é anunciado como mobilado." },
+  { theme: "bolig", blank: "Det er ___ bad i denne leiligheten.", answer: "delt", pt: "Esta casa tem casa de banho partilhada." },
+  { theme: "bolig", blank: "___ dekker blant annet vaktmester og vedlikehold.", answer: "Fellesutgifter", pt: "As despesas comuns cobrem, entre outras coisas, o porteiro e a manutenção." },
+  { theme: "bolig", blank: "Du bør alltid be om en ___ før du signerer kontrakten.", answer: "visning", pt: "Deves sempre pedir uma visita ao imóvel antes de assinares o contrato." },
+  { theme: "bolig", blank: "___ dekker skader på dine egne eiendeler.", answer: "Innboforsikring", pt: "O seguro de recheio cobre danos aos teus próprios bens." },
+  { theme: "bolig", blank: "Send en kort ___ når du er interessert i en bolig.", answer: "søknad", pt: "Envia uma candidatura curta quando estiveres interessado num imóvel." },
+
+  // ---- finn.no: procura de emprego (jobbsøking) ----
+  { theme: "jobbsoking", blank: "___ beskriver hvilke oppgaver jobben har.", answer: "Stillingsannonsen", pt: "A oferta de emprego descreve quais são as tarefas do trabalho." },
+  { theme: "jobbsoking", blank: "Du må ofte oppfylle noen ___ for å søke på jobben.", answer: "kvalifikasjoner", pt: "Muitas vezes tens de cumprir alguns requisitos para te candidatares ao emprego." },
+  { theme: "jobbsoking", blank: "Husk å sende søknaden før ___.", answer: "søknadsfristen", pt: "Lembra-te de enviar a candidatura antes do prazo." },
+  { theme: "jobbsoking", blank: "___ bør vise hvorfor du passer til stillingen.", answer: "Søknadsbrevet", pt: "A carta de candidatura deve mostrar porque és adequado para a posição." },
+  { theme: "jobbsoking", blank: "Arbeidsgiveren spør ofte om din tidligere ___.", answer: "arbeidserfaring", pt: "O empregador pergunta muitas vezes pela tua experiência profissional anterior." },
+  { theme: "jobbsoking", blank: "Ta med gode ___ til intervjuet.", answer: "referanser", pt: "Leva boas referências para a entrevista." },
+  { theme: "jobbsoking", blank: "Jeg har et ___ på fredag.", answer: "intervju", pt: "Tenho uma entrevista na sexta-feira." },
+  { theme: "jobbsoking", blank: "Denne stillingen er et ___, ikke en fast jobb.", answer: "vikariat", pt: "Esta posição é uma substituição temporária, não um emprego permanente." },
+  { theme: "jobbsoking", blank: "Jeg ønsker å jobbe ___, ikke deltid.", answer: "heltid", pt: "Quero trabalhar a tempo inteiro, não meio período." },
+  { theme: "jobbsoking", blank: "Etter tre måneder ble jobben en ___ stilling.", answer: "fast", pt: "Depois de três meses, o trabalho tornou-se uma posição permanente." },
+
+  // ---- termos técnicos industriais / frases de campo ----
+  { theme: "industri", blank: "Du må bruke ___ på byggeplassen.", answer: "hjelm", pt: "Tens de usar capacete no estaleiro." },
+  { theme: "industri", blank: "Bruk alltid vernebriller ved ___.", answer: "sveising", pt: "Usa sempre óculos de proteção durante a soldadura." },
+  { theme: "industri", blank: "___ kjører varer inn og ut av lageret.", answer: "Trucken", pt: "A empilhadora transporta mercadorias para dentro e fora do armazém." },
+  { theme: "industri", blank: "Kranen løfter tunge ___ på byggeplassen.", answer: "materialer", pt: "O guindaste levanta materiais pesados no estaleiro." },
+  { theme: "industri", blank: "Jeg jobber ___ denne uken.", answer: "nattskift", pt: "Esta semana trabalho no turno da noite." },
+  { theme: "industri", blank: "HMS står for helse, miljø og ___.", answer: "sikkerhet", pt: "HMS significa saúde, ambiente e segurança." },
+  { theme: "industri", blank: "Alt personale må ha ___ på seg i produksjonshallen.", answer: "verneutstyr", pt: "Todo o pessoal tem de usar equipamento de proteção no pavilhão de produção." },
+  { theme: "industri", blank: "___ av maskinene skjer hver måned.", answer: "Vedlikehold", pt: "A manutenção das máquinas acontece todos os meses." },
+  { theme: "industri", blank: "Produksjonslinjen stoppet på grunn av en teknisk ___.", answer: "feil", pt: "A linha de produção parou por causa de uma falha técnica." },
+  { theme: "industri", blank: "Bruk alltid ___ når du løfter tunge ting.", answer: "arbeidshansker", pt: "Usa sempre luvas de trabalho quando levantas coisas pesadas." },
+];
+const EXTRA_ITEMS = GENERATED.concat(
+  CURATED_EXTRA.map((it, i) => ({ id: "cur-" + i, level: 1, ...it }))
+);
 
 // ---------- Jornal: textos de leitura por cidade ----------
 // Nota: estes textos são reescritos em norueguês simples a partir de notícias
@@ -403,93 +602,95 @@ const NEWS = [
     sentences: [
       { no: "En streik blant flygeledere skaper store problemer på Oslo lufthavn i dag.", pt: "Uma greve entre controladores de tráfego aéreo está a causar grandes problemas no Aeroporto de Oslo hoje." },
       { no: "Rundt 9000 passasjerer blir rammet av kanselleringer hos flyselskapet Norwegian.", pt: "Cerca de 9000 passageiros são afetados por cancelamentos da companhia aérea Norwegian." },
-      { no: "72 avganger fra Oslo lufthavn er kansellert.", pt: "72 voos a partir do Aeroporto de Oslo foram cancelados." },
-      { no: "Luftrommet rundt Oslo stenges for all flytrafikk i noen timer i morgen.", pt: "O espaço aéreo à volta de Oslo vai ser encerrado a todo o tráfego aéreo durante algumas horas amanhã." },
-      { no: "Streiken rammer også flygelederne ved Bergen lufthavn.", pt: "A greve também afeta os controladores de tráfego aéreo no Aeroporto de Bergen." },
-    ],
-  },
-  {
-    id: "oslo-2", city: "oslo",
-    title_no: "Togforsinkelser skaper frustrasjon i Oslo-området",
-    title_pt: "Atrasos nos comboios causam frustração na região de Oslo",
-    sentences: [
-      { no: "Mange togpassasjerer i Oslo-området har opplevd forsinkelser den siste tiden.", pt: "Muitos passageiros de comboio na região de Oslo têm sofrido atrasos recentemente." },
-      { no: "En politiker fra partiet MDG vil gjøre det enklere å få refusjon når toget er forsinket.", pt: "Uma política do partido MDG quer facilitar o reembolso quando o comboio está atrasado." },
-      { no: "Hun mener folk med månedskort bør få pengene raskt tilbake.", pt: "Ela defende que as pessoas com passe mensal devem receber o dinheiro de volta rapidamente." },
-      { no: "Forsinkelsene rammer mange som pendler til jobb hver dag.", pt: "Os atrasos afetam muitas pessoas que fazem o trajeto para o trabalho todos os dias." },
-      { no: "Saken diskuteres nå blant lokale politikere.", pt: "O assunto está agora a ser discutido entre os políticos locais." },
+      { no: "Alene fra Oslo lufthavn er 72 avganger kansellert.", pt: "Só no Aeroporto de Oslo, 72 voos foram cancelados." },
+      { no: "Streiken startet etter at partene ikke ble enige i lønnsforhandlingene.", pt: "A greve começou depois de as partes não terem chegado a acordo nas negociações salariais." },
+      { no: "Norsk Flygelederforbund varslet streiken på forhånd.", pt: "O Sindicato Norueguês dos Controladores de Tráfego Aéreo tinha avisado antecipadamente sobre a greve." },
+      { no: "Flygeledere ved både Oslo lufthavn og Bergen lufthavn er tatt ut i streik.", pt: "Estão em greve controladores de tráfego aéreo tanto no Aeroporto de Oslo como no de Bergen." },
+      { no: "Luftrommet rundt Oslo stenges for all flytrafikk i noen timer i morgen tidlig.", pt: "O espaço aéreo à volta de Oslo vai ser encerrado a todo o tráfego aéreo durante algumas horas de manhã cedo." },
+      { no: "Det blir også store begrensninger i luftrommet over Vestlandet.", pt: "Também vai haver grandes restrições no espaço aéreo sobre a região oeste da Noruega." },
+      { no: "Avinor sier at ordinær passasjertrafikk blir nedprioritert i denne perioden.", pt: "A Avinor diz que o tráfego normal de passageiros vai ter menos prioridade neste período." },
+      { no: "Mange reisende må derfor vente lenger på flyplassen enn normalt.", pt: "Por isso, muitos viajantes vão ter de esperar mais tempo no aeroporto do que o normal." },
+      { no: "Flyselskapene oppfordrer passasjerer til å sjekke status på flyet før de reiser til lufthavnen.", pt: "As companhias aéreas aconselham os passageiros a verificar o estado do voo antes de irem para o aeroporto." },
+      { no: "Noen passasjerer får tilbud om ombooking til senere avganger.", pt: "Alguns passageiros recebem a opção de mudar para voos mais tarde." },
+      { no: "Turister og forretningsreisende er blant dem som rammes hardest.", pt: "Turistas e viajantes de negócios estão entre os mais afetados." },
+      { no: "Streiken kommer midt i årets lønnsoppgjør mellom partene i arbeidslivet.", pt: "A greve acontece a meio das negociações salariais deste ano." },
+      { no: "Slike streiker er relativt sjeldne i norsk luftfart.", pt: "Greves deste tipo são relativamente raras na aviação norueguesa." },
+      { no: "Konflikten handler om lønn og arbeidsvilkår for flygeledere.", pt: "O conflito é sobre salários e condições de trabalho dos controladores." },
+      { no: "Begge parter sier de ønsker en rask løsning.", pt: "Ambas as partes dizem que querem uma solução rápida." },
+      { no: "Inntil videre er det usikkert hvor lenge streiken vil vare.", pt: "Por agora, ainda não se sabe quanto tempo a greve vai durar." },
+      { no: "Norwegian beklager ulempene streiken skaper for passasjerene.", pt: "A Norwegian pede desculpa pelos transtornos causados aos passageiros." },
+      { no: "Flypassasjerer oppfordres til å følge med på oppdateringer fra flyselskapet og lufthavnen.", pt: "Os passageiros são aconselhados a acompanhar as atualizações da companhia aérea e do aeroporto." },
     ],
   },
   {
     id: "asker-1", city: "asker",
-    title_no: "Togtrøbbel også på Sandvika stasjon i Asker",
-    title_pt: "Também há problemas de comboios na estação de Sandvika, em Asker",
+    title_no: "Togtrøbbel og endringer i handelsgaten i Asker",
+    title_pt: "Problemas de comboio e mudanças na rua comercial de Asker",
     sentences: [
       { no: "Et tog ble nylig stående stille på Sandvika stasjon i Asker.", pt: "Um comboio ficou recentemente parado na estação de Sandvika, em Asker." },
       { no: "Togtrøbbel er et vanlig tema i lokalavisen Budstikka om dagen.", pt: "Problemas com os comboios são um tema comum no jornal local Budstikka nos últimos tempos." },
       { no: "Mange pendlere i Asker bruker toget for å komme seg til jobb i Oslo.", pt: "Muitos pendulares em Asker usam o comboio para chegar ao trabalho em Oslo." },
       { no: "Forsinkelser på jernbanen skaper irritasjon blant innbyggerne.", pt: "Os atrasos na linha ferroviária causam irritação entre os residentes." },
-      { no: "Flere ønsker bedre punktlighet på strekningen.", pt: "Muitos pedem mais pontualidade nesta linha." },
-    ],
-  },
-  {
-    id: "asker-2", city: "asker",
-    title_no: "Butikk i Asker stengte etter 22 år",
-    title_pt: "Uma loja em Asker fechou depois de 22 anos",
-    sentences: [
-      { no: "En butikk i Asker sentrum måtte stenge etter 22 år.", pt: "Uma loja no centro de Asker teve de fechar depois de 22 anos." },
-      { no: "Nye virksomheter overtar nå lokalene.", pt: "Novos negócios estão agora a ocupar o espaço." },
-      { no: "Nyheten preger handelsgaten i sentrum.", pt: "A notícia marca a rua comercial do centro." },
-      { no: "Flere kunder er triste over at den gamle butikken er borte.", pt: "Vários clientes ficaram tristes por a loja antiga ter desaparecido." },
+      { no: "Flere ønsker bedre punktlighet på strekningen mellom Asker og Oslo.", pt: "Muitos pedem mais pontualidade na linha entre Asker e Oslo." },
+      { no: "Samtidig skjer det endringer i handelsgaten i Asker sentrum.", pt: "Ao mesmo tempo, há mudanças na rua comercial do centro de Asker." },
+      { no: "En butikk som hadde vært der i 22 år, måtte nylig stenge.", pt: "Uma loja que esteve lá durante 22 anos teve de fechar recentemente." },
+      { no: "Nye virksomheter overtar nå de gamle lokalene.", pt: "Novos negócios estão agora a ocupar os antigos espaços." },
+      { no: "Mange faste kunder er triste over at den gamle butikken er borte.", pt: "Muitos clientes habituais ficaram tristes por a loja antiga ter desaparecido." },
       { no: "Lokalavisen skriver at nye aktører ønsker å satse i området.", pt: "O jornal local escreve que novos empresários querem apostar na zona." },
+      { no: "Asker er en kommune med både by- og naturpreg.", pt: "Asker é um município com características tanto urbanas como de natureza." },
+      { no: "Kommunen ligger mellom Oslo og Drammen, med god togforbindelse til begge byer.", pt: "O município fica entre Oslo e Drammen, com boa ligação de comboio a ambas as cidades." },
+      { no: "Mange som jobber i Oslo velger å bo i Asker på grunn av naturen og roen.", pt: "Muitas pessoas que trabalham em Oslo optam por viver em Asker por causa da natureza e da tranquilidade." },
+      { no: "Boligprisene i Asker er høye sammenlignet med resten av landet.", pt: "Os preços da habitação em Asker são altos em comparação com o resto do país." },
+      { no: "Kommunen jobber med flere prosjekter for bedre kollektivtransport.", pt: "O município está a trabalhar em vários projetos para melhorar o transporte público." },
+      { no: "Innbyggerne håper både togtilbudet og handelsgaten fortsetter å utvikle seg positivt.", pt: "Os residentes esperam que tanto os comboios como a rua comercial continuem a melhorar." },
     ],
   },
   {
     id: "askim-1", city: "askim",
-    title_no: "Lokal bensinstasjon i Askim har god vekst",
-    title_pt: "Uma bomba de gasolina local em Askim está a crescer bem",
+    title_no: "Askim: industrihistorie, en voksende bensinstasjon og en ny kommune",
+    title_pt: "Askim: história industrial, uma bomba de gasolina em crescimento e um novo município",
     sentences: [
-      { no: "En lokal bensinstasjon i Askim-området har hatt god vekst.", pt: "Uma bomba de gasolina local na zona de Askim teve um bom crescimento." },
-      { no: "Omsetningen har økt til over tretti millioner kroner.", pt: "O volume de negócios aumentou para mais de trinta milhões de coroas." },
+      { no: "Askim har lang historie som industriby.", pt: "Askim tem uma longa história como cidade industrial." },
+      { no: "Byen var kjent for gummivarefabrikken Viking, som lagde støvler og dekk.", pt: "A cidade era conhecida pela fábrica de borracha Viking, que produzia botas e pneus." },
+      { no: "Fabrikken sluttet med gummiproduksjon på 1990-tallet.", pt: "A fábrica deixou de produzir borracha na década de 1990." },
+      { no: "I dag er det andre bedrifter som preger næringslivet i Askim.", pt: "Hoje em dia, são outras empresas que marcam a economia de Askim." },
+      { no: "En lokal bensinstasjon i området har hatt god vekst det siste året.", pt: "Uma bomba de gasolina local na zona teve um bom crescimento no último ano." },
+      { no: "Omsetningen til stasjonen har økt til over tretti millioner kroner.", pt: "O volume de negócios da estação aumentou para mais de trinta milhões de coroas." },
       { no: "Stasjonen selger både drivstoff og dagligvarer.", pt: "A estação vende combustível e também bens de consumo diário." },
       { no: "Eierne sier at gode kunderelasjoner er viktig for suksessen.", pt: "Os proprietários dizem que as boas relações com os clientes são importantes para o sucesso." },
-      { no: "Nyheten er omtalt i lokalavisen Smaalenenes.", pt: "A notícia foi divulgada pelo jornal local Smaalenenes." },
-    ],
-  },
-  {
-    id: "askim-2", city: "askim",
-    title_no: "Askim er i dag en del av Indre Østfold",
-    title_pt: "Askim faz hoje parte do município de Indre Østfold",
-    sentences: [
       { no: "Askim var tidligere en egen kommune.", pt: "Askim era anteriormente um município independente." },
       { no: "I 2020 ble Askim slått sammen med flere andre kommuner.", pt: "Em 2020, Askim foi fundida com vários outros municípios." },
       { no: "Den nye kommunen heter Indre Østfold.", pt: "O novo município chama-se Indre Østfold." },
-      { no: "Askim er fortsatt et viktig sentrum i området.", pt: "Askim continua a ser um centro importante na região." },
+      { no: "Askim er fortsatt et viktig sentrum i området, med butikker og tjenester.", pt: "Askim continua a ser um centro importante na região, com lojas e serviços." },
       { no: "Mange tjenester, som skole og helse, styres nå fra samme kommune.", pt: "Muitos serviços, como escola e saúde, são agora geridos pelo mesmo município." },
+      { no: "Toget til Oslo tar under en time fra Askim.", pt: "O comboio para Oslo demora menos de uma hora a partir de Askim." },
+      { no: "Lave boligpriser gjør Askim attraktiv for barnefamilier som flytter fra Oslo-området.", pt: "Os preços baixos da habitação tornam Askim atrativa para famílias com crianças que se mudam da zona de Oslo." },
+      { no: "Kommunen ønsker flere arbeidsplasser innen teknologi i årene som kommer.", pt: "O município deseja mais postos de trabalho na área da tecnologia nos próximos anos." },
     ],
   },
   {
     id: "sarpsborg-1", city: "sarpsborg",
-    title_no: "Vann flommer over i nytt boligfelt i Sarpsborg",
-    title_pt: "Água transborda num novo bairro residencial em Sarpsborg",
+    title_no: "Sarpsborg: vannproblemer, ledige jobber og en tusenårig historie",
+    title_pt: "Sarpsborg: problemas com água, vagas de emprego e uma história milenar",
     sentences: [
       { no: "Et nytt boligfelt i Sarpsborg har fått problemer med vann som flommer over.", pt: "Um novo bairro residencial em Sarpsborg tem tido problemas com água que transborda." },
       { no: "Beboere forteller om vann som trenger inn når det regner kraftig.", pt: "Os moradores relatam água a entrar nas casas quando chove com força." },
-      { no: "Kommunen ser nå på mulige løsninger.", pt: "O município está agora a analisar possíveis soluções." },
+      { no: "Kommunen ser nå på mulige løsninger på problemet.", pt: "O município está agora a analisar possíveis soluções para o problema." },
       { no: "Saken bekymrer flere som nylig har kjøpt bolig i feltet.", pt: "O caso preocupa várias pessoas que compraram casa recentemente no bairro." },
       { no: "Utbyggeren er også koblet inn i saken.", pt: "A construtora também está envolvida no processo." },
-    ],
-  },
-  {
-    id: "sarpsborg-2", city: "sarpsborg",
-    title_no: "Flere ledige stillinger i Sarpsborg-området",
-    title_pt: "Várias vagas de emprego na região de Sarpsborg",
-    sentences: [
-      { no: "Det finnes flere ledige stillinger i Sarpsborg-området akkurat nå.", pt: "Existem várias vagas de emprego na região de Sarpsborg neste momento." },
+      { no: "Samtidig finnes det flere ledige stillinger i Sarpsborg-området akkurat nå.", pt: "Ao mesmo tempo, existem várias vagas de emprego na região de Sarpsborg neste momento." },
       { no: "Blant annet søkes det etter en leder for digital utvikling i Grålum.", pt: "Entre outras, procura-se um responsável de desenvolvimento digital em Grålum." },
       { no: "Det er også behov for en strategisk innkjøpsleder.", pt: "Também há necessidade de um responsável estratégico de compras." },
-      { no: "Flere kommuner i Østfold samarbeider om rekruttering.", pt: "Vários municípios de Østfold colaboram na contratação." },
+      { no: "Flere kommuner i Østfold samarbeider om rekruttering til ledige stillinger.", pt: "Vários municípios de Østfold colaboram na contratação para vagas em aberto." },
       { no: "Interesserte kan finne stillingene på nettsidene til lokalavisen.", pt: "Os interessados podem encontrar as vagas no site do jornal local." },
+      { no: "Borregaard er en av de største bedriftene i Sarpsborg og en viktig arbeidsgiver.", pt: "A Borregaard é uma das maiores empresas de Sarpsborg e um empregador importante." },
+      { no: "Fabrikken lager produkter av trevirke og satser også på grønn teknologi.", pt: "A fábrica produz produtos a partir de madeira e também aposta em tecnologia verde." },
+      { no: "Mange innbyggere jobber der eller i bedrifter knyttet til fabrikken.", pt: "Muitos residentes trabalham lá ou em empresas ligadas à fábrica." },
+      { no: "Sarpsborg er en av Norges eldste byer.", pt: "Sarpsborg é uma das cidades mais antigas da Noruega." },
+      { no: "Byen ble grunnlagt av kong Olav den hellige i år 1016.", pt: "A cidade foi fundada pelo rei Olavo, o Santo, no ano 1016." },
+      { no: "Sarpsfossen, den kraftige fossen i byen, er kjent for sin skjønnhet.", pt: "A queda de água Sarpsfossen, a poderosa cascata da cidade, é conhecida pela sua beleza." },
+      { no: "Hvert år arrangeres det arrangementer som viser byens lange historie.", pt: "Todos os anos são organizados eventos que mostram a longa história da cidade." },
+      { no: "Sarpsborg har god togforbindelse til både Oslo og Sverige.", pt: "Sarpsborg tem boa ligação de comboio tanto a Oslo como à Suécia." },
     ],
   },
 ];
@@ -586,7 +787,7 @@ function saveCustom(items) {
 let progress = loadProgress();
 let customItems = loadCustom();
 
-function allItems() { return ITEMS.concat(customItems); }
+function allItems() { return ITEMS.concat(EXTRA_ITEMS).concat(customItems); }
 
 function getThemes() {
   const builtinIds = THEMES.map(t => t.id);
@@ -617,16 +818,9 @@ function optionsFor(item) {
 }
 
 // ---------- Speech ----------
-const RATE_KEY = "norsk-puls-rate";
-function loadRate() {
-  try { const raw = localStorage.getItem(RATE_KEY); return raw ? parseFloat(raw) : 0.9; } catch { return 0.9; }
-}
-function saveRate(r) { try { localStorage.setItem(RATE_KEY, String(r)); } catch {} }
-let speechRate = loadRate();
-
-// ---- Leitor de jornal: voz e velocidade (separado da prática) ----
-const NEWS_RATE_KEY = "norsk-puls-news-rate";
-const NEWS_VOICE_KEY = "norsk-puls-news-voice";
+// ---- Voz e velocidade — configuração única, partilhada por toda a app ----
+const NEWS_RATE_KEY = "norsk-puls-rate";
+const NEWS_VOICE_KEY = "norsk-puls-voice";
 function loadNewsRate() {
   try { const raw = localStorage.getItem(NEWS_RATE_KEY); return raw ? parseFloat(raw) : 1.0; } catch { return 1.0; }
 }
@@ -657,9 +851,10 @@ function speak(text, onError) {
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "nb-NO";
     const voices = window.speechSynthesis.getVoices();
-    const noVoice = voices.find(v => v.lang && (v.lang.toLowerCase().startsWith("nb") || v.lang.toLowerCase().startsWith("no")));
-    if (noVoice) utter.voice = noVoice;
-    utter.rate = speechRate;
+    const chosen = voices.find(v => v.name === newsVoiceName)
+      || voices.find(v => v.lang && (v.lang.toLowerCase().startsWith("nb") || v.lang.toLowerCase().startsWith("no")));
+    if (chosen) utter.voice = chosen;
+    utter.rate = newsRate;
     utter.onerror = () => onError && onError("Não foi possível reproduzir o áudio.");
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
@@ -684,7 +879,7 @@ function getRecognition() {
 // ---------- State ----------
 let currentTab = "news";
 let currentTheme = "basico";
-let practiceIdx = 0, exerciseIdx = 0, exerciseScore = { correct: 0, total: 0 }, exerciseOptions = null, writeIdx = 0;
+let practiceIdx = loadPracticeIdx("basico"), exerciseOptions = null, writeIdx = 0;
 let listening = false, heard = "", result = null, micError = "", showPhonetic = false;
 let recInstance = null;
 let exSelected = null;
@@ -708,6 +903,69 @@ function currentNewsArticle() {
 
 function pool() { return allItems().filter(i => i.theme === currentTheme); }
 
+// ---------- Progresso híbrido persistente (localStorage) ----------
+// Cada tema+modo ("ex" = exercícios, "pr" = praticar) guarda:
+//  - uma ORDEM fixa e embaralhada dos itens (para o "cursor" fazer sentido sempre)
+//  - um CURSOR = até onde já respondeste bem, em sequência, sem parar
+// A pessoa pode sempre navegar livremente com as setas (viewState, só em memória)
+// sem mexer no cursor guardado — por isso nunca perde o progresso "oficial".
+function orderKey(mode, theme) { return `norsk-puls-order-${mode}-${theme}`; }
+function cursorKey(mode, theme) { return `norsk-puls-cursor-${mode}-${theme}`; }
+function loadJSON(key, fallback) {
+  try { const raw = localStorage.getItem(key); return raw !== null ? JSON.parse(raw) : fallback; } catch { return fallback; }
+}
+function saveJSON(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+
+function getOrderIds(mode, theme) {
+  const ids = allItems().filter(i => i.theme === theme).map(i => i.id);
+  const idSet = new Set(ids);
+  let order = loadJSON(orderKey(mode, theme), null);
+  if (!order) {
+    order = shuffle(ids.slice());
+    saveJSON(orderKey(mode, theme), order);
+    return order;
+  }
+  let filtered = order.filter(id => idSet.has(id));
+  const missing = ids.filter(id => !filtered.includes(id));
+  if (missing.length) filtered = filtered.concat(shuffle(missing));
+  if (filtered.length !== order.length) saveJSON(orderKey(mode, theme), filtered);
+  return filtered;
+}
+function resolveOrder(mode, theme) {
+  const ids = getOrderIds(mode, theme);
+  const map = new Map(allItems().filter(i => i.theme === theme).map(i => [i.id, i]));
+  return ids.map(id => map.get(id)).filter(Boolean);
+}
+function getCursor(mode, theme, len) {
+  let c = loadJSON(cursorKey(mode, theme), 0);
+  if (typeof c !== "number" || c < 0 || isNaN(c)) c = 0;
+  if (c > len) c = len;
+  return c;
+}
+function setCursor(mode, theme, idx) { saveJSON(cursorKey(mode, theme), idx); }
+
+// Posição que a pessoa está a VER neste momento (transitória, não guardada).
+// Só o cursor acima é que representa o progresso oficial.
+let viewState = { ex: {}, pr: {} };
+function getViewIdx(mode, theme, order, cursor) {
+  if (viewState[mode][theme] === undefined) {
+    viewState[mode][theme] = Math.min(cursor, Math.max(order.length - 1, 0));
+  }
+  let v = viewState[mode][theme];
+  if (v < 0) v = 0;
+  if (v > order.length - 1) v = Math.max(order.length - 1, 0);
+  viewState[mode][theme] = v;
+  return v;
+}
+function setViewIdx(mode, theme, idx) { viewState[mode][theme] = idx; }
+
+function practiceIdxKey(theme) { return `norsk-puls-practice-idx-${theme}`; }
+function loadPracticeIdx(theme) {
+  const v = loadJSON(practiceIdxKey(theme), 0);
+  return typeof v === "number" && v >= 0 ? v : 0;
+}
+function savePracticeIdx(theme, idx) { saveJSON(practiceIdxKey(theme), idx); }
+
 function renderThemeTabs() {
   const el = document.getElementById("themeTabs");
   const themes = getThemes();
@@ -718,8 +976,9 @@ function renderThemeTabs() {
     b.onclick = () => {
       if (b.dataset.theme === currentTheme) return;
       currentTheme = b.dataset.theme;
-      practiceIdx = 0; heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0;
-      exerciseIdx = 0; exSelected = null; exerciseOptions = null; exerciseScore = { correct: 0, total: 0 };
+      practiceIdx = loadPracticeIdx(currentTheme);
+      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0;
+      exSelected = null; exerciseOptions = null;
       testState = { running: false, set: [], idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
       render();
     };
@@ -846,15 +1105,23 @@ function renderPractice() {
       </div>
       <div class="speed-row">
         <span class="speed-label">velocidade:</span>
-        <button class="speed-btn ${speechRate <= 0.65 ? "active" : ""}" data-rate="0.6">🐢 lenta</button>
-        <button class="speed-btn ${speechRate > 0.65 && speechRate <= 0.95 ? "active" : ""}" data-rate="0.9">🚶 normal</button>
-        <button class="speed-btn ${speechRate > 0.95 ? "active" : ""}" data-rate="1.1">🏃 rápida</button>
+        <button class="speed-btn ${newsRate <= 0.65 ? "active" : ""}" data-rate="0.6">🐢 lenta</button>
+        <button class="speed-btn ${newsRate > 0.65 && newsRate <= 0.95 ? "active" : ""}" data-rate="0.9">🚶 normal</button>
+        <button class="speed-btn ${newsRate > 0.95 ? "active" : ""}" data-rate="1.1">🏃 rápida</button>
       </div>
+      ${(() => {
+        const voices = getNorwegianVoices();
+        if (!voices.length) return "";
+        return `<select class="news-select" id="practiceVoiceSelect" style="margin-bottom:12px">${voices.map(v => `<option value="${v.name}" ${v.name === newsVoiceName ? "selected" : ""}>${v.name} (${v.lang})</option>`).join("")}</select>`;
+      })()}
       ${micError ? `<p class="error-text">${micError}</p>` : ""}
       ${heardBlock}
-      <button class="btn next" id="btnNext">Próxima frase →</button>
+      <div class="nav-row" style="display:flex;gap:8px;margin-top:8px">
+        <button class="news-icon-btn" id="btnPracPrev" ${practiceIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
+        <button class="btn next" id="btnNext" style="flex:1">Próxima frase →</button>
+      </div>
     </div>
-    <p class="note">Nota: a pontuação compara o que o reconhecimento de voz percebeu com a frase-alvo — é um bom indicador para começar, mas ainda não é uma análise fonética completa.</p>
+    <p class="note">Nota: a pontuação compara o que o reconhecimento de voz percebeu com a frase-alvo — é um bom indicador para começar, mas ainda não é uma análise fonética completa. O teu progresso nesta secção fica guardado automaticamente.</p>
   `;
 }
 
@@ -886,21 +1153,21 @@ function renderWrite() {
 }
 
 function renderExercises() {
-  const p = pool();
-
-  if (exerciseIdx >= p.length) {
-    const pct = exerciseScore.total ? Math.round((exerciseScore.correct / exerciseScore.total) * 100) : 0;
-    return `
-      <div class="card center-card">
-        <p class="display" style="font-size:28px;font-weight:600;margin:8px 0">${pct}%</p>
-        <p class="translation" style="margin-bottom:24px">Completaste os ${p.length} exercícios deste nível — ${exerciseScore.correct}/${exerciseScore.total} certas.</p>
-        <button class="btn" id="btnRestartEx" style="margin:0 auto">↺ Recomeçar</button>
-      </div>`;
+  const theme = currentTheme;
+  const order = resolveOrder("ex", theme);
+  if (!order.length) {
+    return `<div class="card center-card"><p class="translation">Ainda não há exercícios neste tema.</p></div>`;
   }
+  const cursor = getCursor("ex", theme, order.length);
+  const completedAll = cursor >= order.length;
+  const viewIdx = getViewIdx("ex", theme, order, completedAll ? order.length - 1 : cursor);
+  const isLive = !completedAll && viewIdx === cursor;
 
-  const item = p[exerciseIdx];
-  if (!exerciseOptions) exerciseOptions = optionsFor(item);
-  const optsHtml = exerciseOptions.map(opt => {
+  const item = order[viewIdx];
+  if (!exerciseOptions || exerciseOptions._for !== item.id) {
+    exerciseOptions = { list: optionsFor(item), _for: item.id };
+  }
+  const optsHtml = exerciseOptions.list.map(opt => {
     const isCorrect = opt === item.answer;
     const isSelected = opt === exSelected;
     let cls = "opt-btn";
@@ -912,17 +1179,30 @@ function renderExercises() {
     return `<button class="${cls}" data-opt="${opt}">${opt}${exSelected && isCorrect ? " ✓" : ""}${exSelected && isSelected && !isCorrect ? " ✗" : ""}</button>`;
   }).join("");
 
+  const banner = completedAll
+    ? `<div class="card center-card" style="margin-bottom:12px;padding:16px">
+        <p class="display" style="font-size:17px;font-weight:600;margin:2px 0">🎉 Já respondeste certo a todas as ${order.length} deste tema!</p>
+        <p class="translation" style="margin-bottom:0">Continua a rever à vontade com as setas abaixo, sempre que quiseres.</p>
+      </div>`
+    : "";
+
   return `
+    ${banner}
     <div class="card">
       <div class="top-row">
-        <p class="card-label mono" style="margin:0">exercício ${exerciseIdx + 1} de ${p.length}</p>
-        <span class="mono" style="font-size:12px;color:var(--muted)">${exerciseScore.correct}/${exerciseScore.total} certas</span>
+        <p class="card-label mono" style="margin:0">exercício ${viewIdx + 1} de ${order.length}${isLive ? "" : " · 🔁 revisão"}</p>
+        <span class="mono" style="font-size:12px;color:var(--muted)">progresso: ${cursor}/${order.length}</span>
       </div>
       <p class="sentence display">${item.blank}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
-      ${exSelected ? `<div class="gloss-block">${exerciseOptions.map(o => `<p class="gloss-line"><b>${o}</b> — ${glossFor(o) || "significado não disponível"}</p>`).join("")}</div>` : ""}
-      ${exSelected ? `<button class="btn next" id="btnExNext" style="margin-top:20px">Próxima →</button>` : ""}
+      ${exSelected ? `<div class="gloss-block">${exerciseOptions.list.map(o => `<p class="gloss-line"><b>${o}</b> — ${glossFor(o) || "significado não disponível"}</p>`).join("")}</div>` : ""}
+      ${exSelected ? `<button class="btn next" id="btnExNext" style="margin-top:16px">${isLive && exSelected !== item.answer ? "Tentar de novo (mesma pergunta) →" : "Próxima →"}</button>` : ""}
+      <div class="nav-row" style="display:flex;gap:8px;align-items:center;margin-top:16px">
+        <button class="news-icon-btn" id="btnExPrev" ${viewIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
+        ${!isLive ? `<button class="btn" id="btnExJumpLive" style="flex:1">↩️ voltar ao meu progresso</button>` : `<span style="flex:1"></span>`}
+        <button class="news-icon-btn" id="btnExNextNav" ${viewIdx >= order.length - 1 ? "disabled" : ""} title="Seguinte">▶</button>
+      </div>
     </div>
   `;
 }
@@ -1036,25 +1316,33 @@ function attachHandlers() {
     };
     const btnFalar = document.getElementById("btnFalar");
     if (btnFalar) btnFalar.onclick = () => { listening ? stopListening() : startListening(); };
+    const goTo = (idx) => {
+      const p = pool();
+      practiceIdx = Math.max(0, Math.min(idx, p.length));
+      savePracticeIdx(currentTheme, practiceIdx);
+      heard = ""; result = null; micError = ""; showPhonetic = false;
+      render();
+    };
     const btnNext = document.getElementById("btnNext");
-    if (btnNext) btnNext.onclick = () => {
-      practiceIdx++; heard = ""; result = null; micError = ""; showPhonetic = false;
-      render();
-    };
+    if (btnNext) btnNext.onclick = () => goTo(practiceIdx + 1);
+    const btnPracPrev = document.getElementById("btnPracPrev");
+    if (btnPracPrev) btnPracPrev.onclick = () => goTo(practiceIdx - 1);
     const btnRestartPractice = document.getElementById("btnRestartPractice");
-    if (btnRestartPractice) btnRestartPractice.onclick = () => {
-      practiceIdx = 0; heard = ""; result = null; micError = ""; showPhonetic = false;
-      render();
-    };
+    if (btnRestartPractice) btnRestartPractice.onclick = () => goTo(0);
     const btnTogglePhon = document.getElementById("btnTogglePhon");
     if (btnTogglePhon) btnTogglePhon.onclick = () => { showPhonetic = !showPhonetic; render(); };
     document.querySelectorAll(".speed-btn").forEach(b => {
       b.onclick = () => {
-        speechRate = parseFloat(b.dataset.rate);
-        saveRate(speechRate);
+        newsRate = parseFloat(b.dataset.rate);
+        saveNewsRate(newsRate);
         render();
       };
     });
+    const voiceSelectP = document.getElementById("practiceVoiceSelect");
+    if (voiceSelectP) voiceSelectP.onchange = () => {
+      newsVoiceName = voiceSelectP.value;
+      saveNewsVoice(newsVoiceName);
+    };
   }
   if (currentTab === "write") {
     const btnWriteOuvir = document.getElementById("btnWriteOuvir");
@@ -1077,20 +1365,61 @@ function attachHandlers() {
     };
   }
   if (currentTab === "exercises") {
+    const theme = currentTheme;
     document.querySelectorAll(".options .opt-btn").forEach(b => {
       b.onclick = () => {
         if (exSelected) return;
         exSelected = b.dataset.opt;
-        const p = pool(); const item = p[exerciseIdx];
-        exerciseScore.total++;
-        if (exSelected === item.answer) exerciseScore.correct++;
+        const order = resolveOrder("ex", theme);
+        const cursor = getCursor("ex", theme, order.length);
+        const viewIdx = viewState.ex[theme];
+        const item = order[viewIdx];
+        const correct = exSelected === item.answer;
+        // só o item "ao vivo" (na ponta do progresso) é que mexe no progresso guardado
+        if (viewIdx === cursor && cursor < order.length && correct) {
+          setCursor("ex", theme, cursor + 1);
+        }
         render();
       };
     });
     const btnExNext = document.getElementById("btnExNext");
-    if (btnExNext) btnExNext.onclick = () => { exerciseIdx++; exSelected = null; exerciseOptions = null; render(); };
-    const btnRestartEx = document.getElementById("btnRestartEx");
-    if (btnRestartEx) btnRestartEx.onclick = () => { exerciseIdx = 0; exSelected = null; exerciseOptions = null; exerciseScore = { correct: 0, total: 0 }; render(); };
+    if (btnExNext) btnExNext.onclick = () => {
+      const order = resolveOrder("ex", theme);
+      const cursor = getCursor("ex", theme, order.length);
+      const viewIdx = viewState.ex[theme];
+      const isLive = viewIdx === cursor && cursor < order.length;
+      if (isLive) {
+        // se estava certo, o cursor já avançou acima; se errado, fica no mesmo sítio
+        setViewIdx("ex", theme, getCursor("ex", theme, order.length));
+      } else {
+        setViewIdx("ex", theme, Math.min(viewIdx + 1, order.length - 1));
+      }
+      exSelected = null; exerciseOptions = null;
+      render();
+    };
+    const btnExPrev = document.getElementById("btnExPrev");
+    if (btnExPrev) btnExPrev.onclick = () => {
+      const viewIdx = viewState.ex[theme] || 0;
+      setViewIdx("ex", theme, Math.max(0, viewIdx - 1));
+      exSelected = null; exerciseOptions = null;
+      render();
+    };
+    const btnExNextNav = document.getElementById("btnExNextNav");
+    if (btnExNextNav) btnExNextNav.onclick = () => {
+      const order = resolveOrder("ex", theme);
+      const viewIdx = viewState.ex[theme] || 0;
+      setViewIdx("ex", theme, Math.min(order.length - 1, viewIdx + 1));
+      exSelected = null; exerciseOptions = null;
+      render();
+    };
+    const btnExJumpLive = document.getElementById("btnExJumpLive");
+    if (btnExJumpLive) btnExJumpLive.onclick = () => {
+      const order = resolveOrder("ex", theme);
+      const cursor = getCursor("ex", theme, order.length);
+      setViewIdx("ex", theme, Math.min(cursor, Math.max(order.length - 1, 0)));
+      exSelected = null; exerciseOptions = null;
+      render();
+    };
   }
   if (currentTab === "test") {
     const btnStart = document.getElementById("btnStartTest");
@@ -1118,12 +1447,49 @@ function attachHandlers() {
     if (themeSelect) themeSelect.onchange = () => {
       newThemeInput.style.display = themeSelect.value === "__new__" ? "block" : "none";
     };
+    const btnSuggest = document.getElementById("btnSuggest");
+    if (btnSuggest) btnSuggest.onclick = () => {
+      const ptEl = document.getElementById("addPt");
+      const hintEl = document.getElementById("suggestHint");
+      const sentenceEl = document.getElementById("addSentence");
+      const answerEl = document.getElementById("addAnswer");
+      const query = (ptEl.value || "").trim().toLowerCase();
+      hintEl.style.display = "block";
+      if (!query) {
+        hintEl.textContent = "Escreve primeiro a frase ou palavra em português acima.";
+        return;
+      }
+      // 1) frase inteira: procura um item cujo .pt seja igual/semelhante
+      const bySentence = allItems().find(i => i.pt && i.pt.toLowerCase() === query);
+      // 2) palavra isolada: procura no glossário reverso (pt -> norueguês)
+      let byWord = null;
+      if (!bySentence) {
+        for (const key in GLOSS) {
+          const meanings = GLOSS[key].split("/").map(s => s.trim().toLowerCase());
+          if (meanings.includes(query)) { byWord = key; break; }
+        }
+      }
+      if (bySentence) {
+        sentenceEl.value = bySentence.blank;
+        answerEl.value = bySentence.answer;
+        hintEl.textContent = `✅ Encontrei uma frase parecida já usada na app: "${bySentence.blank.replace("___", bySentence.answer)}"`;
+      } else if (byWord) {
+        answerEl.value = byWord;
+        if (!sentenceEl.value) sentenceEl.value = "___";
+        hintEl.textContent = `✅ Encontrei a palavra "${byWord}" no glossário da app.`;
+      } else {
+        hintEl.textContent = "🤷 Não encontrei nada parecido no vocabulário que a app já conhece. Escreve tu mesmo a frase em norueguês, ou pede a tradução à Claude no chat e cola aqui.";
+      }
+    };
     const btnSubmit = document.getElementById("btnAddSubmit");
     if (btnSubmit) btnSubmit.onclick = () => {
       const sentenceEl = document.getElementById("addSentence");
       const answerEl = document.getElementById("addAnswer");
       const ptEl = document.getElementById("addPt");
       const errorEl = document.getElementById("addError");
+      const successEl = document.getElementById("addSuccess");
+      errorEl.style.display = "none";
+      successEl.style.display = "none";
       let sentence = sentenceEl.value.trim();
       const answer = answerEl.value.trim();
       const pt = ptEl.value.trim();
@@ -1141,6 +1507,20 @@ function attachHandlers() {
       customItems.push({ id: "c-" + Date.now(), level: 1, theme, blank: sentence, answer, pt });
       saveCustom(customItems);
       currentTheme = theme;
+      render();
+      // feedback verde imediato — o render() acima já limpou o formulário (novo HTML),
+      // por isso mostramos a confirmação depois de o DOM ser recriado.
+      setTimeout(() => {
+        const s = document.getElementById("addSuccess");
+        if (s) { s.style.display = "block"; setTimeout(() => { if (s) s.style.display = "none"; }, 2500); }
+      }, 0);
+    };
+    const btnClearAllCustom = document.getElementById("btnClearAllCustom");
+    if (btnClearAllCustom) btnClearAllCustom.onclick = () => {
+      if (!customItems.length) return;
+      if (!confirm(`Isto vai apagar os ${customItems.length} itens que adicionaste ou importaste, em todos os temas. O conteúdo próprio da app não é afetado. Continuar?`)) return;
+      customItems = [];
+      saveCustom(customItems);
       render();
     };
     document.querySelectorAll(".del-btn").forEach(b => {
@@ -1242,16 +1622,19 @@ function renderAdd() {
   return `
     <div class="card">
       <p class="card-label mono">adicionar vocabulário ou frase</p>
-      <label class="field-label">Frase em norueguês (usa ___ na palavra a testar, ou deixa vazio para praticar só a palavra)</label>
+      <label class="field-label">Tradução em português</label>
+      <input class="text-input" id="addPt" type="text" placeholder="Eu conduzo para o trabalho todos os dias." />
+      <button class="btn" id="btnSuggest" style="margin-top:8px">🔎 Sugerir tradução (baseada no que a app já sabe)</button>
+      <p class="translation" id="suggestHint" style="margin:8px 0 0;display:none"></p>
+      <label class="field-label" style="margin-top:16px">Frase em norueguês (usa ___ na palavra a testar, ou deixa vazio para praticar só a palavra)</label>
       <input class="text-input" id="addSentence" type="text" placeholder="Jeg ___ til jobb hver dag." />
       <label class="field-label">Palavra ou resposta correta</label>
       <input class="text-input" id="addAnswer" type="text" placeholder="kjører" />
-      <label class="field-label">Tradução em português</label>
-      <input class="text-input" id="addPt" type="text" placeholder="Eu conduzo para o trabalho todos os dias." />
       <label class="field-label">Tema</label>
       <select class="text-input" id="addThemeSelect">${themeOptionsHtml}</select>
       <input class="text-input" id="addNewTheme" type="text" placeholder="nome do novo tema (ex: família)" style="display:none;margin-top:8px" />
       <p class="error-text" id="addError" style="display:none;margin-top:12px"></p>
+      <p class="feedback-text" id="addSuccess" style="display:none;color:var(--green);margin-top:12px">✅ Adicionado com sucesso!</p>
       <button class="btn" id="btnAddSubmit" style="margin-top:16px">➕ Adicionar</button>
     </div>
     <div class="card" style="margin-top:16px">
@@ -1270,7 +1653,12 @@ function renderAdd() {
       <p class="feedback-text" id="importSuccess" style="display:none;color:var(--green)"></p>
       <button class="btn" id="btnImport" style="margin-top:16px">📥 Importar tudo</button>
     </div>
-    <p class="note">O que adicionares aqui fica guardado neste telemóvel/navegador e entra automaticamente nos exercícios e na prática deste tema. As opções de escolha múltipla são geradas a partir de outras palavras do mesmo tema.</p>
+    <div class="card" style="margin-top:16px">
+      <p class="card-label mono">🧹 gestão dos teus itens</p>
+      <p class="translation" style="margin-bottom:12px">Isto apaga só o que TU adicionaste ou importaste — nunca o conteúdo próprio da app. Útil se um import antigo ficou com erros.</p>
+      <button class="btn" id="btnClearAllCustom" style="border-color:var(--red);color:var(--red)">🗑️ Limpar todos os meus itens (todos os temas)</button>
+    </div>
+    <p class="note">O que adicionares aqui fica guardado neste telemóvel/navegador e entra automaticamente nos exercícios e na prática deste tema. As opções de escolha múltipla são geradas a partir de outras palavras do mesmo tema. A "sugestão automática" procura no vocabulário que a app já conhece — não é um tradutor livre; para frases novas, o mais fiável é pedires a tradução à Claude no chat e colares aqui.</p>
   `;
 }
 
