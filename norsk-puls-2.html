@@ -316,7 +316,7 @@
       <button class="level-badge" id="levelBadge" style="cursor:pointer;font:inherit" data-tab="stats">nível 1 / 3</button>
     </div>
   </div>
-  <p class="subtitle">Português → Norueguês, com foco na pronúncia</p>
+  <p class="subtitle">Português → Norueguês (bokmål), com foco na pronúncia</p>
 
   <div class="tabs" id="themeTabs"></div>
 
@@ -1228,7 +1228,11 @@ function saveNewsVoice(name) { try { localStorage.setItem(NEWS_VOICE_KEY, name);
 
 function getNorwegianVoices() {
   if (!window.speechSynthesis) return [];
-  return window.speechSynthesis.getVoices().filter(v => v.lang && /^(nb|nn|no)/i.test(v.lang));
+  // Só bokmål (nb) e o código genérico "no" que alguns motores de voz usam
+  // quando não distinguem os dois padrões escritos do norueguês. "nn"
+  // (nynorsk) fica de fora de propósito — toda a app ensina bokmål, por
+  // isso não faz sentido oferecer uma voz nynorsk para ler este texto.
+  return window.speechSynthesis.getVoices().filter(v => v.lang && /^(nb|no)/i.test(v.lang) && !/^nn/i.test(v.lang));
 }
 
 // Maps each word in a sentence to its character start/end, using the exact
