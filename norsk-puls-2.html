@@ -225,9 +225,23 @@
     font-family: 'IBM Plex Mono', monospace;
     cursor: pointer;
   }
-  .opt-btn.correct { border-color: var(--green); background: rgba(74,222,140,0.1); }
-  .opt-btn.wrong { border-color: var(--red); background: rgba(239,111,108,0.1); }
+  .opt-btn.correct { border-color: var(--green); background: rgba(74,222,140,0.1); animation: popIn 0.25s ease; }
+  .opt-btn.wrong { border-color: var(--red); background: rgba(239,111,108,0.1); animation: popIn 0.25s ease; }
   .opt-btn.dim { border-color: var(--border); opacity: 0.5; }
+  @keyframes popIn {
+    0% { transform: scale(0.94); }
+    60% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+  }
+  @media (max-width: 380px) {
+    .options { grid-template-columns: 1fr; }
+  }
+  #streakBadge {
+    display: inline-flex;
+    align-items: center;
+    color: var(--amber);
+    border-color: var(--amber);
+  }
 
   .center-card { text-align: center; }
   .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -297,7 +311,10 @@
 <div class="wrap">
   <div class="header-row">
     <h1 class="display">Norsk <span class="aurora-text">Puls</span></h1>
-    <button class="level-badge" id="levelBadge" style="cursor:pointer;font:inherit" data-tab="stats">nível 1 / 3</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="level-badge" id="streakBadge" style="display:none"></span>
+      <button class="level-badge" id="levelBadge" style="cursor:pointer;font:inherit" data-tab="stats">nível 1 / 3</button>
+    </div>
   </div>
   <p class="subtitle">Português → Norueguês, com foco na pronúncia</p>
 
@@ -374,6 +391,7 @@ const ITEMS = [
 const THEMES = [
   { id: "basico", label: "🗣️ Básico" },
   { id: "cumprimentos", label: "👋 Cumprimentos" },
+  { id: "familia", label: "👪 Família" },
   { id: "numeros", label: "🔢 Números" },
   { id: "restaurante", label: "🍽️ Restaurante" },
   { id: "trabalho", label: "🔧 Trabalho" },
@@ -727,6 +745,24 @@ GENERATED = GENERATED.concat(genMulti("restaurante", [
   { no: "Jeg drikker ___.", pt: "Eu bebo {}." },
 ], DRIKKE, "no", "pt", "drink"));
 
+const FAMILIA = [
+  { no: "mor", pt: "mãe" }, { no: "far", pt: "pai" }, { no: "søster", pt: "irmã" },
+  { no: "bror", pt: "irmão" }, { no: "sønn", pt: "filho" }, { no: "datter", pt: "filha" },
+  { no: "kone", pt: "esposa" }, { no: "mann", pt: "marido" },
+  { no: "bestefar", pt: "avô" }, { no: "bestemor", pt: "avó" },
+];
+GENERATED = GENERATED.concat(genMulti("familia", [
+  { no: "Jeg har en {}.", pt: "Eu tenho um(a) {}." },
+  { no: "Har du en {}?", pt: "Tens um(a) {}?" },
+], FAMILIA, "no", "pt", "family"));
+GENERATED = GENERATED.concat(genMulti("familia", [
+  { no: "Min {} bor i Norge.", pt: "O/A meu/minha {} mora na Noruega." },
+  { no: "Bor din {} i Norge?", pt: "O/A teu/tua {} mora na Noruega?" },
+], FAMILIA, "no", "pt", "family"));
+GENERATED = GENERATED.concat(genMulti("familia", [
+  { no: "Jeg savner {} min.", pt: "Tenho saudades do/da meu/minha {}." },
+], FAMILIA, "no", "pt", "family"));
+
 GENERATED = GENERATED.map((it, i) => ({ id: "gen-" + i, level: 1, ...it }));
 
 // Frases fixas — texto idiomático que não se presta bem a gerar por molde
@@ -1043,6 +1079,35 @@ function saveCustom(items) {
 }
 let progress = loadProgress();
 let customItems = loadCustom();
+
+// ---------- Sequência diária (streak) ----------
+const STREAK_KEY = "norsk-puls-streak";
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function loadStreak() {
+  try {
+    const raw = localStorage.getItem(STREAK_KEY);
+    return raw ? JSON.parse(raw) : { current: 0, longest: 0, lastDate: null };
+  } catch { return { current: 0, longest: 0, lastDate: null }; }
+}
+function saveStreak(s) { try { localStorage.setItem(STREAK_KEY, JSON.stringify(s)); } catch {} }
+let streak = loadStreak();
+// Chamado sempre que a pessoa faz alguma atividade real (responder um
+// exercício, terminar um teste, avançar na prática/escrita). Conta no
+// máximo uma vez por dia — repetir atividade no mesmo dia não infla a
+// sequência, e um dia inteiro sem nada quebra-a de volta para 1.
+function touchStreak() {
+  const today = todayStr();
+  if (streak.lastDate === today) return;
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const yesterday = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, "0")}-${String(y.getDate()).padStart(2, "0")}`;
+  streak.current = (streak.lastDate === yesterday) ? streak.current + 1 : 1;
+  streak.longest = Math.max(streak.longest, streak.current);
+  streak.lastDate = today;
+  saveStreak(streak);
+}
 
 function allItems() { return ITEMS.concat(EXTRA_ITEMS).concat(customItems); }
 
@@ -1398,6 +1463,16 @@ function render() {
     if (currentTab === "news") stopNewsPlayback();
     currentTab = "stats"; render();
   };
+  const streakEl = document.getElementById("streakBadge");
+  if (streakEl) {
+    if (streak.current > 0) {
+      streakEl.style.display = "inline-flex";
+      streakEl.textContent = `🔥 ${streak.current}`;
+      streakEl.title = `${streak.current} dia(s) seguido(s) · recorde: ${streak.longest}`;
+    } else {
+      streakEl.style.display = "none";
+    }
+  }
   renderThemeTabs();
   document.querySelectorAll("#mainTabs .tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === currentTab));
   const el = document.getElementById("content");
@@ -1452,8 +1527,8 @@ function renderNews() {
 
       ${supported ? `
       <div class="news-controls">
-        <button class="news-icon-btn primary" id="btnNewsPlay" title="Ler em voz alta">${!newsPlaying ? "▶️" : (newsPaused ? "▶️" : "⏸️")}</button>
-        <button class="news-icon-btn" id="btnNewsStop" title="Parar">⏹️</button>
+        <button class="news-icon-btn primary" id="btnNewsPlay" title="Ler em voz alta" aria-label="Ler em voz alta">${!newsPlaying ? "▶️" : (newsPaused ? "▶️" : "⏸️")}</button>
+        <button class="news-icon-btn" id="btnNewsStop" title="Parar" aria-label="Parar leitura">⏹️</button>
         <select class="news-select" id="newsVoiceSelect">${voiceOptionsHtml}</select>
       </div>
       <div class="news-speed-block">
@@ -1528,7 +1603,7 @@ function renderPractice() {
       ${micError ? `<p class="error-text">${micError}</p>` : ""}
       ${heardBlock}
       <div class="nav-row" style="display:flex;gap:8px;margin-top:8px">
-        <button class="news-icon-btn" id="btnPracPrev" ${practiceIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
+        <button class="news-icon-btn" id="btnPracPrev" ${practiceIdx <= 0 ? "disabled" : ""} title="Anterior" aria-label="Frase anterior">◀</button>
         <button class="btn next" id="btnNext" style="flex:1">Próxima frase →</button>
       </div>
     </div>
@@ -1686,9 +1761,9 @@ function renderExercises() {
       </div>` : ""}
       ${exSelected ? `<button class="btn next" id="btnExNext" style="margin-top:16px">${isLive && exSelected !== item.answer ? "Tentar de novo (mesma pergunta) →" : "Próxima →"}</button>` : ""}
       <div class="nav-row" style="display:flex;gap:8px;align-items:center;margin-top:16px">
-        <button class="news-icon-btn" id="btnExPrev" ${viewIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
+        <button class="news-icon-btn" id="btnExPrev" ${viewIdx <= 0 ? "disabled" : ""} title="Anterior" aria-label="Exercício anterior">◀</button>
         ${!isLive ? `<button class="btn" id="btnExJumpLive" style="flex:1">↩️ voltar ao meu progresso</button>` : `<span style="flex:1"></span>`}
-        <button class="news-icon-btn" id="btnExNextNav" ${viewIdx >= order.length - 1 ? "disabled" : ""} title="Seguinte">▶</button>
+        <button class="news-icon-btn" id="btnExNextNav" ${viewIdx >= order.length - 1 ? "disabled" : ""} title="Seguinte" aria-label="Exercício seguinte">▶</button>
       </div>
     </div>
   `;
@@ -1706,6 +1781,10 @@ function renderTest() {
       </div>`;
   }
   if (!testState.running) {
+    const p = pool();
+    if (!p.length) {
+      return `<div class="card center-card"><p class="translation">Este tema ainda não tem frases suficientes para um teste. Adiciona algumas em ➕ Adicionar, ou escolhe outro tema.</p></div>`;
+    }
     return `
       <div class="card center-card">
         <p class="translation">${progress.history.length === 0 ? "Ainda não fizeste nenhum teste." : `Testes feitos: ${progress.history.length}`}</p>
@@ -1811,7 +1890,7 @@ function attachHandlers() {
       render();
     };
     const btnNext = document.getElementById("btnNext");
-    if (btnNext) btnNext.onclick = () => goTo(practiceIdx + 1);
+    if (btnNext) btnNext.onclick = () => { touchStreak(); goTo(practiceIdx + 1); };
     const btnPracPrev = document.getElementById("btnPracPrev");
     if (btnPracPrev) btnPracPrev.onclick = () => goTo(practiceIdx - 1);
     const btnRestartPractice = document.getElementById("btnRestartPractice");
@@ -1865,6 +1944,7 @@ function attachHandlers() {
     };
     const btnWriteNext = document.getElementById("btnWriteNext");
     if (btnWriteNext) btnWriteNext.onclick = () => {
+      touchStreak();
       writeRevealed = false;
       if (writeMode === "question") {
         const p = pool();
@@ -1883,6 +1963,7 @@ function attachHandlers() {
       b.onclick = () => {
         if (exSelected) return;
         exSelected = b.dataset.opt;
+        touchStreak();
         const order = resolveOrder("ex", theme);
         const cursor = getCursor("ex", theme, order.length);
         const viewIdx = viewState.ex[theme];
@@ -1943,6 +2024,7 @@ function attachHandlers() {
       b.onclick = () => {
         if (testState.selected) return;
         testState.selected = b.dataset.opt;
+        touchStreak();
         const item = testState.set[testState.idx];
         if (testState.selected === item.answer) testState.tally++;
         render();
@@ -2168,6 +2250,33 @@ function startListening() {
 }
 function stopListening() { if (recInstance) recInstance.stop(); }
 
+// ---------- Conquistas ----------
+// Calculadas a partir de dados que já existem (progresso, streak, itens
+// próprios) — não há nenhum estado novo para guardar, só regras sobre o
+// que já está gravado.
+const ACHIEVEMENT_DEFS = [
+  { id: "first", icon: "🔥", label: "Primeiro passo", desc: "Fizeste a tua primeira sessão de prática.",
+    check: (ctx) => ctx.streak.longest >= 1 },
+  { id: "streak3", icon: "🔥", label: "3 dias seguidos", desc: "Praticaste 3 dias seguidos.",
+    check: (ctx) => ctx.streak.longest >= 3 },
+  { id: "streak7", icon: "🔥", label: "Uma semana inteira", desc: "Praticaste 7 dias seguidos.",
+    check: (ctx) => ctx.streak.longest >= 7 },
+  { id: "firstTest", icon: "🏆", label: "Primeiro teste", desc: "Completaste o teu primeiro teste.",
+    check: (ctx) => ctx.testCount >= 1 },
+  { id: "perfectTest", icon: "💯", label: "Teste perfeito", desc: "Tiveste 100% num teste.",
+    check: (ctx) => ctx.history.some(h => h.score === 100) },
+  { id: "ex50", icon: "📘", label: "50 exercícios", desc: "Já respondeste certo a 50 exercícios.",
+    check: (ctx) => ctx.doneAll >= 50 },
+  { id: "ex200", icon: "📗", label: "200 exercícios", desc: "Já respondeste certo a 200 exercícios.",
+    check: (ctx) => ctx.doneAll >= 200 },
+  { id: "themeDone", icon: "🗂️", label: "Tema dominado", desc: "Completaste todos os exercícios de um tema.",
+    check: (ctx) => ctx.rows.some(r => r.total > 0 && r.done >= r.total) },
+  { id: "explorer", icon: "🌍", label: "Explorador", desc: "Praticaste em todos os temas.",
+    check: (ctx) => ctx.rows.length > 0 && ctx.rows.every(r => r.done > 0) },
+  { id: "contributor", icon: "✍️", label: "Contribuidor", desc: "Adicionaste o teu primeiro item.",
+    check: (ctx) => ctx.customCount >= 1 },
+];
+
 function renderStats() {
   const themes = getThemes();
   let totalAll = 0, doneAll = 0;
@@ -2226,6 +2335,26 @@ function renderStats() {
       </div>
       ${testCount ? `<p class="translation" style="margin:0 0 12px">Último resultado: <b style="color:var(--text)">${lastScore}%</b></p>` : ""}
       ${testRowsHtml}
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="top-row">
+        <p class="card-label mono" style="margin:0">🏅 conquistas</p>
+        <span class="mono" style="font-size:12px;color:var(--muted)">${ACHIEVEMENT_DEFS.filter(a => a.check({ streak, testCount, history: progress.history, doneAll, rows, customCount: customItems.length })).length}/${ACHIEVEMENT_DEFS.length}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+        ${ACHIEVEMENT_DEFS.map(a => {
+          const unlocked = a.check({ streak, testCount, history: progress.history, doneAll, rows, customCount: customItems.length });
+          return `
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:10px;border:1px solid ${unlocked ? "var(--border2)" : "var(--border)"};opacity:${unlocked ? "1" : "0.4"}">
+            <span style="font-size:20px;line-height:1">${a.icon}</span>
+            <div>
+              <p style="margin:0;font-size:12px;font-weight:600">${a.label}</p>
+              <p style="margin:2px 0 0;font-size:11px;color:var(--muted)">${a.desc}</p>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
     </div>
     <p class="note">Nota: o "nível" ao lado do título só sobe quando fazes um teste e acertas 80% ou mais — é um selo do teu histórico, não bloqueia nem desbloqueia matéria. Este painel é que mostra o teu progresso real.</p>
   `;
@@ -2484,6 +2613,7 @@ function shuffle(arr) {
 }
 function startTest() {
   const p = pool();
+  if (!p.length) { render(); return; } // tema sem frases suficientes — nada a fazer
   // Entre 15 e 20 perguntas por teste (limitado pelo tamanho da pool do tema).
   const target = 15 + Math.floor(Math.random() * 6);
   const size = Math.min(target, p.length);
