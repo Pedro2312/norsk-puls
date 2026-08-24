@@ -389,6 +389,31 @@ const THEMES = [
 ];
 const fullSentence = (item) => item.blank.replace("___", item.answer);
 
+// Prepara o modo "construir a frase": divide a frase certa em blocos de
+// palavras e junta 2 palavras-distratoras vindas de outras frases do mesmo
+// tema, para obrigar a pensar na ordem certa e não só a reconhecer a frase.
+function initBuild(item) {
+  const words = fullSentence(item).split(" ").filter(Boolean);
+  const tiles = words.map((w, i) => ({ id: "w" + i, text: w }));
+  const seen = new Set(words.map(w => w.toLowerCase()));
+  const others = shuffle(pool().filter(i => i.id !== item.id));
+  let added = 0;
+  for (const o of others) {
+    if (added >= 2) break;
+    const ws = fullSentence(o).split(" ").filter(w => w && !seen.has(w.toLowerCase()));
+    if (!ws.length) continue;
+    const w = ws[Math.floor(Math.random() * ws.length)];
+    seen.add(w.toLowerCase());
+    tiles.push({ id: "d" + added, text: w });
+    added++;
+  }
+  buildBank = shuffle(tiles);
+  buildAnswer = [];
+  buildChecked = false;
+  buildLastItemId = item.id;
+}
+
+
 // Deteta itens em formato "Pergunta? — Resposta." (gerados como estrutura de
 // Pergunta+Resposta) para os poder separar no modo "pensar a pergunta" do
 // Escrever. Devolve null se o item não tiver essa estrutura.
@@ -1212,6 +1237,8 @@ let currentTab = "news";
 let currentTheme = "basico";
 let practiceIdx = loadPracticeIdx("basico"), exerciseOptions = null, writeIdx = 0, writeQIdx = 0;
 let writeMode = "recall", writeRevealed = false;
+let exMode = "choice"; // "choice" (escolha múltipla) ou "build" (construir a frase por blocos)
+let buildBank = [], buildAnswer = [], buildChecked = false, buildLastItemId = null;
 let listening = false, heard = "", result = null, micError = "", showPhonetic = false;
 let recInstance = null;
 let exSelected = null;
@@ -1383,7 +1410,7 @@ function renderThemeTabs() {
       if (b.dataset.theme === currentTheme) return;
       currentTheme = b.dataset.theme;
       practiceIdx = loadPracticeIdx(currentTheme);
-      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0; writeQIdx = 0; writeRevealed = false;
+      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0; writeQIdx = 0; writeRevealed = false; buildLastItemId = null;
       exSelected = null; exerciseOptions = null;
       testState = { running: false, set: [], idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
       render();
@@ -1647,6 +1674,57 @@ function renderExercises() {
   const isLive = !completedAll && viewIdx === cursor;
 
   const item = order[viewIdx];
+
+  const banner = completedAll
+    ? `<div class="card center-card" style="margin-bottom:12px;padding:16px">
+        <p class="display" style="font-size:17px;font-weight:600;margin:2px 0">🎉 Já respondeste certo a todas as ${order.length} deste tema!</p>
+        <p class="translation" style="margin-bottom:0">Continua a rever à vontade com as setas abaixo, sempre que quiseres.</p>
+      </div>`
+    : "";
+
+  const modeBar = `
+    <div class="btn-row" style="margin-bottom:16px">
+      <button class="tab-btn ${exMode === "choice" ? "active" : ""}" id="btnExModeChoice">🔘 Escolha múltipla</button>
+      <button class="tab-btn ${exMode === "build" ? "active" : ""}" id="btnExModeBuild">🧩 Construir a frase</button>
+    </div>`;
+
+  if (exMode === "build") {
+    if (buildLastItemId !== item.id) initBuild(item);
+    const answerHtml = buildAnswer.length
+      ? buildAnswer.map(t => `<button class="opt-btn" data-tile="${t.id}" data-zone="answer">${t.text}</button>`).join("")
+      : `<span style="color:var(--muted);font-size:13px">toca nas palavras abaixo, pela ordem certa</span>`;
+    const bankHtml = buildBank.map(t => `<button class="opt-btn" data-tile="${t.id}" data-zone="bank">${t.text}</button>`).join("");
+    const userSentence = buildAnswer.map(t => t.text).join(" ");
+    const isCorrect = userSentence.toLowerCase() === fullSentence(item).toLowerCase();
+    return `
+      ${banner}
+      <div class="card">
+        <div class="top-row">
+          <p class="card-label mono" style="margin:0">exercício ${viewIdx + 1} de ${order.length}${isLive ? "" : " · 🔁 revisão"}</p>
+          <span class="mono" style="font-size:12px;color:var(--muted)">progresso: ${cursor}/${order.length}</span>
+        </div>
+        ${modeBar}
+        <p class="translation" style="font-size:17px;margin-bottom:16px">${item.pt}</p>
+        <p class="card-label mono" style="margin-bottom:8px">a tua frase:</p>
+        <div class="options" id="buildAnswerZone" style="min-height:52px;border:1px dashed var(--border);border-radius:12px;padding:10px;margin-bottom:16px">${answerHtml}</div>
+        <p class="card-label mono" style="margin-bottom:8px">blocos disponíveis:</p>
+        <div class="options" id="buildBankZone">${bankHtml}</div>
+        ${buildChecked ? `
+          <div class="gloss-block" style="margin-top:16px">
+            <p class="sentence display" style="font-size:16px;color:${isCorrect ? "var(--green)" : "var(--red)"}">${isCorrect ? "✅ Certo!" : "❌ Não é bem isso."}</p>
+            <p class="translation" style="margin-top:4px">Frase certa: <b>${fullSentence(item)}</b></p>
+          </div>
+          <button class="btn next" id="btnBuildNext" style="margin-top:16px">${isLive && !isCorrect ? "Tentar de novo (mesma pergunta) →" : "Próxima →"}</button>
+        ` : `<button class="btn next" id="btnBuildCheck" style="margin-top:16px" ${buildAnswer.length ? "" : "disabled"}>Verificar</button>`}
+        <div class="nav-row" style="display:flex;gap:8px;align-items:center;margin-top:16px">
+          <button class="news-icon-btn" id="btnExPrev" ${viewIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
+          ${!isLive ? `<button class="btn" id="btnExJumpLive" style="flex:1">↩️ voltar ao meu progresso</button>` : `<span style="flex:1"></span>`}
+          <button class="news-icon-btn" id="btnExNextNav" ${viewIdx >= order.length - 1 ? "disabled" : ""} title="Seguinte">▶</button>
+        </div>
+      </div>
+    `;
+  }
+
   if (!exerciseOptions || exerciseOptions._for !== item.id) {
     exerciseOptions = { list: optionsFor(item), _for: item.id };
   }
@@ -1662,13 +1740,6 @@ function renderExercises() {
     return `<button class="${cls}" data-opt="${opt}">${opt}${exSelected && isCorrect ? " ✓" : ""}${exSelected && isSelected && !isCorrect ? " ✗" : ""}</button>`;
   }).join("");
 
-  const banner = completedAll
-    ? `<div class="card center-card" style="margin-bottom:12px;padding:16px">
-        <p class="display" style="font-size:17px;font-weight:600;margin:2px 0">🎉 Já respondeste certo a todas as ${order.length} deste tema!</p>
-        <p class="translation" style="margin-bottom:0">Continua a rever à vontade com as setas abaixo, sempre que quiseres.</p>
-      </div>`
-    : "";
-
   return `
     ${banner}
     <div class="card">
@@ -1676,6 +1747,7 @@ function renderExercises() {
         <p class="card-label mono" style="margin:0">exercício ${viewIdx + 1} de ${order.length}${isLive ? "" : " · 🔁 revisão"}</p>
         <span class="mono" style="font-size:12px;color:var(--muted)">progresso: ${cursor}/${order.length}</span>
       </div>
+      ${modeBar}
       <p class="sentence display">${item.blank}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
@@ -1879,42 +1951,101 @@ function attachHandlers() {
   }
   if (currentTab === "exercises") {
     const theme = currentTheme;
-    document.querySelectorAll(".options .opt-btn").forEach(b => {
-      b.onclick = () => {
-        if (exSelected) return;
-        exSelected = b.dataset.opt;
+
+    const btnExModeChoice = document.getElementById("btnExModeChoice");
+    if (btnExModeChoice) btnExModeChoice.onclick = () => { exMode = "choice"; render(); };
+    const btnExModeBuild = document.getElementById("btnExModeBuild");
+    if (btnExModeBuild) btnExModeBuild.onclick = () => { exMode = "build"; buildLastItemId = null; render(); };
+
+    if (exMode === "build") {
+      document.querySelectorAll('#buildBankZone [data-tile]').forEach(b => {
+        b.onclick = () => {
+          if (buildChecked) return;
+          const id = b.dataset.tile;
+          const idx = buildBank.findIndex(t => t.id === id);
+          if (idx === -1) return;
+          buildAnswer.push(buildBank[idx]);
+          buildBank.splice(idx, 1);
+          render();
+        };
+      });
+      document.querySelectorAll('#buildAnswerZone [data-tile]').forEach(b => {
+        b.onclick = () => {
+          if (buildChecked) return;
+          const id = b.dataset.tile;
+          const idx = buildAnswer.findIndex(t => t.id === id);
+          if (idx === -1) return;
+          buildBank.push(buildAnswer[idx]);
+          buildAnswer.splice(idx, 1);
+          render();
+        };
+      });
+      const btnBuildCheck = document.getElementById("btnBuildCheck");
+      if (btnBuildCheck) btnBuildCheck.onclick = () => {
+        buildChecked = true;
         const order = resolveOrder("ex", theme);
         const cursor = getCursor("ex", theme, order.length);
         const viewIdx = viewState.ex[theme];
         const item = order[viewIdx];
-        const correct = exSelected === item.answer;
-        // só o item "ao vivo" (na ponta do progresso) é que mexe no progresso guardado
+        const userSentence = buildAnswer.map(t => t.text).join(" ");
+        const correct = userSentence.toLowerCase() === fullSentence(item).toLowerCase();
         if (viewIdx === cursor && cursor < order.length && correct) {
           setCursor("ex", theme, cursor + 1);
         }
         render();
       };
-    });
-    const btnExNext = document.getElementById("btnExNext");
-    if (btnExNext) btnExNext.onclick = () => {
-      const order = resolveOrder("ex", theme);
-      const cursor = getCursor("ex", theme, order.length);
-      const viewIdx = viewState.ex[theme];
-      const isLive = viewIdx === cursor && cursor < order.length;
-      if (isLive) {
-        // se estava certo, o cursor já avançou acima; se errado, fica no mesmo sítio
-        setViewIdx("ex", theme, getCursor("ex", theme, order.length));
-      } else {
-        setViewIdx("ex", theme, Math.min(viewIdx + 1, order.length - 1));
-      }
-      exSelected = null; exerciseOptions = null;
-      render();
-    };
+      const btnBuildNext = document.getElementById("btnBuildNext");
+      if (btnBuildNext) btnBuildNext.onclick = () => {
+        const order = resolveOrder("ex", theme);
+        const cursor = getCursor("ex", theme, order.length);
+        const viewIdx = viewState.ex[theme];
+        const isLive = viewIdx === cursor && cursor < order.length;
+        if (isLive) {
+          setViewIdx("ex", theme, getCursor("ex", theme, order.length));
+        } else {
+          setViewIdx("ex", theme, Math.min(viewIdx + 1, order.length - 1));
+        }
+        buildLastItemId = null;
+        render();
+      };
+    } else {
+      document.querySelectorAll(".options .opt-btn").forEach(b => {
+        b.onclick = () => {
+          if (exSelected) return;
+          exSelected = b.dataset.opt;
+          const order = resolveOrder("ex", theme);
+          const cursor = getCursor("ex", theme, order.length);
+          const viewIdx = viewState.ex[theme];
+          const item = order[viewIdx];
+          const correct = exSelected === item.answer;
+          // só o item "ao vivo" (na ponta do progresso) é que mexe no progresso guardado
+          if (viewIdx === cursor && cursor < order.length && correct) {
+            setCursor("ex", theme, cursor + 1);
+          }
+          render();
+        };
+      });
+      const btnExNext = document.getElementById("btnExNext");
+      if (btnExNext) btnExNext.onclick = () => {
+        const order = resolveOrder("ex", theme);
+        const cursor = getCursor("ex", theme, order.length);
+        const viewIdx = viewState.ex[theme];
+        const isLive = viewIdx === cursor && cursor < order.length;
+        if (isLive) {
+          // se estava certo, o cursor já avançou acima; se errado, fica no mesmo sítio
+          setViewIdx("ex", theme, getCursor("ex", theme, order.length));
+        } else {
+          setViewIdx("ex", theme, Math.min(viewIdx + 1, order.length - 1));
+        }
+        exSelected = null; exerciseOptions = null;
+        render();
+      };
+    }
     const btnExPrev = document.getElementById("btnExPrev");
     if (btnExPrev) btnExPrev.onclick = () => {
       const viewIdx = viewState.ex[theme] || 0;
       setViewIdx("ex", theme, Math.max(0, viewIdx - 1));
-      exSelected = null; exerciseOptions = null;
+      exSelected = null; exerciseOptions = null; buildLastItemId = null;
       render();
     };
     const btnExNextNav = document.getElementById("btnExNextNav");
@@ -1922,7 +2053,7 @@ function attachHandlers() {
       const order = resolveOrder("ex", theme);
       const viewIdx = viewState.ex[theme] || 0;
       setViewIdx("ex", theme, Math.min(order.length - 1, viewIdx + 1));
-      exSelected = null; exerciseOptions = null;
+      exSelected = null; exerciseOptions = null; buildLastItemId = null;
       render();
     };
     const btnExJumpLive = document.getElementById("btnExJumpLive");
@@ -1930,7 +2061,7 @@ function attachHandlers() {
       const order = resolveOrder("ex", theme);
       const cursor = getCursor("ex", theme, order.length);
       setViewIdx("ex", theme, Math.min(cursor, Math.max(order.length - 1, 0)));
-      exSelected = null; exerciseOptions = null;
+      exSelected = null; exerciseOptions = null; buildLastItemId = null;
       render();
     };
   }
