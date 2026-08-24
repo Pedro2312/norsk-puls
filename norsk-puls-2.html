@@ -1059,8 +1059,18 @@ function getThemes() {
 // misturar "ingeniør" com "seks" ou "sju" só porque calharam no mesmo tema.
 // Prioridade 2 (sem categoria, ou poucos candidatos da mesma): pontua por
 // semelhança de "forma" (nº de palavras e comprimento) como aproximação.
+// Palavras-número em norueguês — usadas para impedir que "sju", "seks", etc.
+// apareçam como opção errada de itens que não são números (o problema mais
+// visível quando um tema tem poucos itens próprios e cai no "resto" da app
+// inteira à procura de distractors).
+const NUMBER_WORDS_NO = new Set([
+  "en", "ei", "et", "to", "tre", "fire", "fem", "seks", "sju", "syv", "åtte", "ni", "ti",
+  "elleve", "tolv", "tretten", "fjorten", "femten", "seksten", "sytten", "atten", "nitten", "tjue", "tretti",
+]);
+
 function pickDistractors(item, candidates, count) {
   const answer = item.answer;
+  const answerIsNumber = NUMBER_WORDS_NO.has(answer.toLowerCase());
   const targetWords = answer.trim().split(/\s+/).length;
   const seen = new Set([answer.toLowerCase()]);
   const scoreOf = (val) => {
@@ -1082,12 +1092,18 @@ function pickDistractors(item, candidates, count) {
   }
   // Categoria não deu candidatos suficientes: completa com o resto, ordenado por forma.
   if (pool.length < count) {
-    const rest = [];
+    let rest = [];
     for (const c of candidates) {
       const val = c.answer;
       if (seen.has(val.toLowerCase())) continue;
       seen.add(val.toLowerCase());
       rest.push(val);
+    }
+    // A resposta certa não é um número: tira números-palavra do resto (a não
+    // ser que sobrem candidatos a menos do que o necessário sem eles).
+    if (!answerIsNumber) {
+      const noNumbers = rest.filter(v => !NUMBER_WORDS_NO.has(v.toLowerCase()));
+      if (noNumbers.length >= count - pool.length) rest = noNumbers;
     }
     const scoredRest = shuffle(rest)
       .map(val => ({ val, score: scoreOf(val) }))
@@ -1491,7 +1507,7 @@ function renderPractice() {
       <p class="sentence display">${target}</p>
       <p class="translation">${item.pt}</p>
       <button class="btn phon-toggle" id="btnTogglePhon" style="margin-bottom:16px">${showPhonetic ? "🙈 Esconder pronúncia" : "👁️ Ver pronúncia (aproximada)"}</button>
-      ${showPhonetic ? `<p class="mono" style="color:var(--muted);font-size:13px;margin:-8px 0 16px">${item.fon || "Ainda não há guia de pronúncia para este item."}</p>` : ""}
+      ${showPhonetic ? `<p class="mono" style="color:var(--muted);font-size:13px;margin:-8px 0 16px">${item.fon || "Este item ainda não tem guia fonético escrito à mão. Usa o botão 🔊 Ouvir abaixo — a pronúncia gravada é mais fiável do que qualquer aproximação escrita."}</p>` : ""}
       <div class="btn-row">
         <button class="btn listen" id="btnOuvir">🔊 Ouvir</button>
         ${supported
