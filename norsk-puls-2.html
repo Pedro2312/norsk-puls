@@ -389,18 +389,20 @@ const THEMES = [
 ];
 const fullSentence = (item) => item.blank.replace("___", item.answer);
 
-// Prepara o modo "construir a frase": divide a frase certa em blocos de
-// palavras e junta 2 palavras-distratoras vindas de outras frases do mesmo
-// tema, para obrigar a pensar na ordem certa e não só a reconhecer a frase.
-function initBuild(item) {
-  const words = fullSentence(item).split(" ").filter(Boolean);
+// Prepara os blocos de palavras para os modos de "construir a frase":
+// targetText é o texto certo a construir; wordPoolFn extrai as palavras de
+// cada item candidato (fullSentence para norueguês, i.pt para português) —
+// assim a mesma lógica serve o modo "Construir a frase", "Ditado" e "Ouvir
+// e traduzir", só muda a língua-alvo dos blocos.
+function initBuildFor(item, targetText, wordPoolFn) {
+  const words = targetText.split(" ").filter(Boolean);
   const tiles = words.map((w, i) => ({ id: "w" + i, text: w }));
   const seen = new Set(words.map(w => w.toLowerCase()));
   const others = shuffle(pool().filter(i => i.id !== item.id));
   let added = 0;
   for (const o of others) {
     if (added >= 2) break;
-    const ws = fullSentence(o).split(" ").filter(w => w && !seen.has(w.toLowerCase()));
+    const ws = wordPoolFn(o).split(" ").filter(w => w && !seen.has(w.toLowerCase()));
     if (!ws.length) continue;
     const w = ws[Math.floor(Math.random() * ws.length)];
     seen.add(w.toLowerCase());
@@ -410,7 +412,20 @@ function initBuild(item) {
   buildBank = shuffle(tiles);
   buildAnswer = [];
   buildChecked = false;
-  buildLastItemId = item.id;
+  buildWrong = false;
+  buildGaveUp = false;
+}
+function initBuild(item) {
+  initBuildFor(item, fullSentence(item), fullSentence);
+  buildLastKey = "build:" + item.id;
+}
+function initListen(item) {
+  initBuildFor(item, fullSentence(item), fullSentence);
+  buildLastKey = "listen:" + item.id;
+}
+function initListenTranslate(item) {
+  initBuildFor(item, item.pt, (o) => o.pt || "");
+  buildLastKey = "listenTranslate:" + item.id;
 }
 
 
@@ -1237,8 +1252,9 @@ let currentTab = "news";
 let currentTheme = "basico";
 let practiceIdx = loadPracticeIdx("basico"), exerciseOptions = null, writeIdx = 0, writeQIdx = 0;
 let writeMode = "recall", writeRevealed = false;
-let exMode = "choice"; // "choice" (escolha múltipla) ou "build" (construir a frase por blocos)
-let buildBank = [], buildAnswer = [], buildChecked = false, buildLastItemId = null;
+let exMode = "choice"; // "choice", "build" (construir), "listen" (ditado) ou "listenTranslate" (ouvir e traduzir)
+let buildBank = [], buildAnswer = [], buildChecked = false, buildLastKey = null;
+let buildWrong = false, buildGaveUp = false;
 let listening = false, heard = "", result = null, micError = "", showPhonetic = false;
 let recInstance = null;
 let exSelected = null;
@@ -1410,7 +1426,7 @@ function renderThemeTabs() {
       if (b.dataset.theme === currentTheme) return;
       currentTheme = b.dataset.theme;
       practiceIdx = loadPracticeIdx(currentTheme);
-      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0; writeQIdx = 0; writeRevealed = false; buildLastItemId = null;
+      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0; writeQIdx = 0; writeRevealed = false; buildLastKey = null;
       exSelected = null; exerciseOptions = null;
       testState = { running: false, set: [], idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
       render();
@@ -1683,19 +1699,66 @@ function renderExercises() {
     : "";
 
   const modeBar = `
-    <div class="btn-row" style="margin-bottom:16px">
+    <div class="btn-row" style="margin-bottom:16px;flex-wrap:wrap">
       <button class="tab-btn ${exMode === "choice" ? "active" : ""}" id="btnExModeChoice">🔘 Escolha múltipla</button>
       <button class="tab-btn ${exMode === "build" ? "active" : ""}" id="btnExModeBuild">🧩 Construir a frase</button>
+      <button class="tab-btn ${exMode === "listen" ? "active" : ""}" id="btnExModeListen">🎧 Ditado</button>
+      <button class="tab-btn ${exMode === "listenTranslate" ? "active" : ""}" id="btnExModeListenTranslate">🌍 Ouvir e traduzir</button>
     </div>`;
 
-  if (exMode === "build") {
-    if (buildLastItemId !== item.id) initBuild(item);
+  if (exMode === "build" || exMode === "listen" || exMode === "listenTranslate") {
+    const key = exMode + ":" + item.id;
+    if (buildLastKey !== key) {
+      if (exMode === "build") initBuild(item);
+      else if (exMode === "listen") initListen(item);
+      else initListenTranslate(item);
+    }
+    const target = exMode === "listenTranslate" ? item.pt : fullSentence(item);
+    const targetWords = target.split(" ").filter(Boolean);
     const answerHtml = buildAnswer.length
-      ? buildAnswer.map(t => `<button class="opt-btn" data-tile="${t.id}" data-zone="answer">${t.text}</button>`).join("")
+      ? buildAnswer.map((t, i) => {
+          let cls = "opt-btn";
+          if (buildWrong) {
+            const correctWord = (targetWords[i] || "").toLowerCase();
+            cls += t.text.toLowerCase() === correctWord ? " correct" : " wrong";
+          }
+          return `<button class="${cls}" data-tile="${t.id}" data-zone="answer">${t.text}</button>`;
+        }).join("")
       : `<span style="color:var(--muted);font-size:13px">toca nas palavras abaixo, pela ordem certa</span>`;
     const bankHtml = buildBank.map(t => `<button class="opt-btn" data-tile="${t.id}" data-zone="bank">${t.text}</button>`).join("");
-    const userSentence = buildAnswer.map(t => t.text).join(" ");
-    const isCorrect = userSentence.toLowerCase() === fullSentence(item).toLowerCase();
+
+    const listenBtn = `<div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnExListenTop">🔊 Ouvir</button></div>`;
+    const promptHtml = exMode === "build"
+      ? `<p class="translation" style="font-size:17px;margin-bottom:8px">${item.pt}</p>${listenBtn}`
+      : `${listenBtn}<p class="note" style="margin-bottom:16px">${exMode === "listen" ? "Ouve quantas vezes precisares e constrói a frase em norueguês que ouviste." : "Ouve a frase em norueguês e constrói a TRADUÇÃO em português com os blocos abaixo."}</p>`;
+
+    const resultBlock = buildChecked
+      ? `
+        <div class="gloss-block" style="margin-top:16px">
+          <p class="sentence display" style="font-size:16px;color:var(--green)">✅ Certo!</p>
+          <p class="translation" style="margin-top:4px">${exMode === "listenTranslate" ? "Norueguês" : "Frase certa"}: <b>${fullSentence(item)}</b></p>
+          ${exMode !== "build" ? `<p class="translation" style="margin-top:2px">Português: ${item.pt}</p>` : ""}
+        </div>
+        <button class="btn next" id="btnBuildNext" style="margin-top:16px">Próxima →</button>
+      `
+      : buildGaveUp
+      ? `
+        <div class="gloss-block" style="margin-top:16px">
+          <p class="sentence display" style="font-size:16px;color:var(--red)">👀 Resposta certa:</p>
+          <p class="translation" style="margin-top:4px">${exMode === "listenTranslate" ? "Norueguês" : "Frase certa"}: <b>${fullSentence(item)}</b></p>
+          ${exMode !== "build" ? `<p class="translation" style="margin-top:2px">Português: ${item.pt}</p>` : ""}
+          <button class="btn listen" id="btnExListenResult" style="margin-top:8px">🔊 Ouvir</button>
+        </div>
+        <button class="btn next" id="btnBuildNext" style="margin-top:16px">Próxima →</button>
+      `
+      : `
+        ${buildWrong ? `<p class="translation" style="color:var(--red);margin-bottom:12px">❌ Ainda não está certo — as palavras a vermelho não estão na posição certa. Ajusta e verifica outra vez.</p>` : ""}
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn next" id="btnBuildCheck" ${buildAnswer.length ? "" : "disabled"}>Verificar</button>
+          ${buildWrong ? `<button class="btn" id="btnBuildGiveUp">👀 Ver a resposta</button>` : ""}
+        </div>
+      `;
+
     return `
       ${banner}
       <div class="card">
@@ -1704,18 +1767,12 @@ function renderExercises() {
           <span class="mono" style="font-size:12px;color:var(--muted)">progresso: ${cursor}/${order.length}</span>
         </div>
         ${modeBar}
-        <p class="translation" style="font-size:17px;margin-bottom:16px">${item.pt}</p>
+        ${promptHtml}
         <p class="card-label mono" style="margin-bottom:8px">a tua frase:</p>
         <div class="options" id="buildAnswerZone" style="min-height:52px;border:1px dashed var(--border);border-radius:12px;padding:10px;margin-bottom:16px">${answerHtml}</div>
         <p class="card-label mono" style="margin-bottom:8px">blocos disponíveis:</p>
         <div class="options" id="buildBankZone">${bankHtml}</div>
-        ${buildChecked ? `
-          <div class="gloss-block" style="margin-top:16px">
-            <p class="sentence display" style="font-size:16px;color:${isCorrect ? "var(--green)" : "var(--red)"}">${isCorrect ? "✅ Certo!" : "❌ Não é bem isso."}</p>
-            <p class="translation" style="margin-top:4px">Frase certa: <b>${fullSentence(item)}</b></p>
-          </div>
-          <button class="btn next" id="btnBuildNext" style="margin-top:16px">${isLive && !isCorrect ? "Tentar de novo (mesma pergunta) →" : "Próxima →"}</button>
-        ` : `<button class="btn next" id="btnBuildCheck" style="margin-top:16px" ${buildAnswer.length ? "" : "disabled"}>Verificar</button>`}
+        ${resultBlock}
         <div class="nav-row" style="display:flex;gap:8px;align-items:center;margin-top:16px">
           <button class="news-icon-btn" id="btnExPrev" ${viewIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
           ${!isLive ? `<button class="btn" id="btnExJumpLive" style="flex:1">↩️ voltar ao meu progresso</button>` : `<span style="flex:1"></span>`}
@@ -1955,9 +2012,27 @@ function attachHandlers() {
     const btnExModeChoice = document.getElementById("btnExModeChoice");
     if (btnExModeChoice) btnExModeChoice.onclick = () => { exMode = "choice"; render(); };
     const btnExModeBuild = document.getElementById("btnExModeBuild");
-    if (btnExModeBuild) btnExModeBuild.onclick = () => { exMode = "build"; buildLastItemId = null; render(); };
+    if (btnExModeBuild) btnExModeBuild.onclick = () => { exMode = "build"; buildLastKey = null; render(); };
+    const btnExModeListen = document.getElementById("btnExModeListen");
+    if (btnExModeListen) btnExModeListen.onclick = () => { exMode = "listen"; buildLastKey = null; render(); };
+    const btnExModeListenTranslate = document.getElementById("btnExModeListenTranslate");
+    if (btnExModeListenTranslate) btnExModeListenTranslate.onclick = () => { exMode = "listenTranslate"; buildLastKey = null; render(); };
 
-    if (exMode === "build") {
+    if (exMode === "build" || exMode === "listen" || exMode === "listenTranslate") {
+      const btnExListenTop = document.getElementById("btnExListenTop");
+      if (btnExListenTop) btnExListenTop.onclick = () => {
+        const order = resolveOrder("ex", theme);
+        const viewIdx = viewState.ex[theme];
+        const item = order[viewIdx];
+        speak(fullSentence(item), () => {});
+      };
+      const btnExListenResult = document.getElementById("btnExListenResult");
+      if (btnExListenResult) btnExListenResult.onclick = () => {
+        const order = resolveOrder("ex", theme);
+        const viewIdx = viewState.ex[theme];
+        const item = order[viewIdx];
+        speak(fullSentence(item), () => {});
+      };
       document.querySelectorAll('#buildBankZone [data-tile]').forEach(b => {
         b.onclick = () => {
           if (buildChecked) return;
@@ -1982,16 +2057,27 @@ function attachHandlers() {
       });
       const btnBuildCheck = document.getElementById("btnBuildCheck");
       if (btnBuildCheck) btnBuildCheck.onclick = () => {
-        buildChecked = true;
         const order = resolveOrder("ex", theme);
         const cursor = getCursor("ex", theme, order.length);
         const viewIdx = viewState.ex[theme];
         const item = order[viewIdx];
+        const target = exMode === "listenTranslate" ? item.pt : fullSentence(item);
         const userSentence = buildAnswer.map(t => t.text).join(" ");
-        const correct = userSentence.toLowerCase() === fullSentence(item).toLowerCase();
-        if (viewIdx === cursor && cursor < order.length && correct) {
-          setCursor("ex", theme, cursor + 1);
+        const correct = userSentence.toLowerCase() === target.toLowerCase();
+        if (correct) {
+          buildChecked = true;
+          buildWrong = false;
+          if (viewIdx === cursor && cursor < order.length) {
+            setCursor("ex", theme, cursor + 1);
+          }
+        } else {
+          buildWrong = true;
         }
+        render();
+      };
+      const btnBuildGiveUp = document.getElementById("btnBuildGiveUp");
+      if (btnBuildGiveUp) btnBuildGiveUp.onclick = () => {
+        buildGaveUp = true;
         render();
       };
       const btnBuildNext = document.getElementById("btnBuildNext");
@@ -2005,7 +2091,7 @@ function attachHandlers() {
         } else {
           setViewIdx("ex", theme, Math.min(viewIdx + 1, order.length - 1));
         }
-        buildLastItemId = null;
+        buildLastKey = null;
         render();
       };
     } else {
@@ -2045,7 +2131,7 @@ function attachHandlers() {
     if (btnExPrev) btnExPrev.onclick = () => {
       const viewIdx = viewState.ex[theme] || 0;
       setViewIdx("ex", theme, Math.max(0, viewIdx - 1));
-      exSelected = null; exerciseOptions = null; buildLastItemId = null;
+      exSelected = null; exerciseOptions = null; buildLastKey = null;
       render();
     };
     const btnExNextNav = document.getElementById("btnExNextNav");
@@ -2053,7 +2139,7 @@ function attachHandlers() {
       const order = resolveOrder("ex", theme);
       const viewIdx = viewState.ex[theme] || 0;
       setViewIdx("ex", theme, Math.min(order.length - 1, viewIdx + 1));
-      exSelected = null; exerciseOptions = null; buildLastItemId = null;
+      exSelected = null; exerciseOptions = null; buildLastKey = null;
       render();
     };
     const btnExJumpLive = document.getElementById("btnExJumpLive");
@@ -2061,7 +2147,7 @@ function attachHandlers() {
       const order = resolveOrder("ex", theme);
       const cursor = getCursor("ex", theme, order.length);
       setViewIdx("ex", theme, Math.min(cursor, Math.max(order.length - 1, 0)));
-      exSelected = null; exerciseOptions = null; buildLastItemId = null;
+      exSelected = null; exerciseOptions = null; buildLastKey = null;
       render();
     };
   }
@@ -2187,10 +2273,14 @@ function attachHandlers() {
         errEl.style.display = "block";
         return;
       }
-      let added = 0, withNotes = 0, unreadable = 0, lastTheme = null;
+      let added = 0, withNotes = 0, unreadable = 0, dup = 0, lastTheme = null;
+      const seenKeys = new Set(customItems.map(i => `${i.blank}|${i.answer}|${i.theme}`.toLowerCase()));
       entries.forEach((entry, i) => {
         const parsed = parseImportEntry(entry, currentTheme);
         if (!parsed) { unreadable++; return; }
+        const key = `${parsed.sentence}|${parsed.answer}|${parsed.theme}`.toLowerCase();
+        if (seenKeys.has(key)) { dup++; return; }
+        seenKeys.add(key);
         customItems.push({ id: "c-" + Date.now() + "-" + i, level: 1, theme: parsed.theme, blank: parsed.sentence, answer: parsed.answer, pt: parsed.pt });
         added++;
         if (parsed.note) withNotes++;
@@ -2201,11 +2291,16 @@ function attachHandlers() {
         const total = entries.length;
         okEl.textContent = `✅ ${added} de ${total} frases adicionadas com sucesso!` +
           (withNotes ? ` (${withNotes} sem tema ou tradução completos — preenchidas com o tema atual)` : "") +
+          (dup ? ` · ${dup} já existiam e foram ignoradas (sem duplicar).` : "") +
           (unreadable ? ` · ${unreadable} linha(s) sem dados suficientes para criar um exercício.` : "");
         okEl.style.display = "block";
         box.value = "";
         if (lastTheme) currentTheme = lastTheme;
         render();
+      } else if (dup > 0 && unreadable === 0) {
+        okEl.textContent = `Essas ${dup} frase(s) já estavam adicionadas — nada de novo para importar.`;
+        okEl.style.display = "block";
+        box.value = "";
       } else {
         errEl.textContent = "Não consegui ler nenhuma linha — confirma que usas o separador \"|\" entre os campos.";
         errEl.style.display = "block";
