@@ -766,26 +766,26 @@ GENERATED = GENERATED.concat(genMulti("industri", [
 // ---- Bancos extra para os temas que tinham ficado com pouco conteúdo:
 // básico, cumprimentos, números, restaurante ----
 const PRONOMES_SUJEITO = [
-  { no: "Jeg", pt_bor: "Eu moro em Oslo.", pt_bor_q: "Moras em Oslo?", pt_bor_pas: "Eu morava em Oslo antes.",
-    pt_job: "Eu trabalho na Noruega.", pt_job_q: "Trabalhas na Noruega?" },
-  { no: "Du", pt_bor: "Tu moras em Oslo.", pt_bor_q: "Moras em Oslo?", pt_bor_pas: "Tu moravas em Oslo antes.",
+  { no: "Jeg", no_mid: "jeg", pt_bor: "Eu moro em Oslo.", pt_bor_q: "Moro em Oslo?", pt_bor_pas: "Eu morava em Oslo antes.",
+    pt_job: "Eu trabalho na Noruega.", pt_job_q: "Trabalho na Noruega?" },
+  { no: "Du", no_mid: "du", pt_bor: "Tu moras em Oslo.", pt_bor_q: "Moras em Oslo?", pt_bor_pas: "Tu moravas em Oslo antes.",
     pt_job: "Tu trabalhas na Noruega.", pt_job_q: "Trabalhas na Noruega?" },
-  { no: "Han", pt_bor: "Ele mora em Oslo.", pt_bor_q: "Ele mora em Oslo?", pt_bor_pas: "Ele morava em Oslo antes.",
+  { no: "Han", no_mid: "han", pt_bor: "Ele mora em Oslo.", pt_bor_q: "Ele mora em Oslo?", pt_bor_pas: "Ele morava em Oslo antes.",
     pt_job: "Ele trabalha na Noruega.", pt_job_q: "Ele trabalha na Noruega?" },
-  { no: "Hun", pt_bor: "Ela mora em Oslo.", pt_bor_q: "Ela mora em Oslo?", pt_bor_pas: "Ela morava em Oslo antes.",
+  { no: "Hun", no_mid: "hun", pt_bor: "Ela mora em Oslo.", pt_bor_q: "Ela mora em Oslo?", pt_bor_pas: "Ela morava em Oslo antes.",
     pt_job: "Ela trabalha na Noruega.", pt_job_q: "Ela trabalha na Noruega?" },
-  { no: "Vi", pt_bor: "Nós moramos em Oslo.", pt_bor_q: "Vocês moram em Oslo?", pt_bor_pas: "Nós morávamos em Oslo antes.",
-    pt_job: "Nós trabalhamos na Noruega.", pt_job_q: "Vocês trabalham na Noruega?" },
-  { no: "Dere", pt_bor: "Vocês moram em Oslo.", pt_bor_q: "Vocês moram em Oslo?", pt_bor_pas: "Vocês moravam em Oslo antes.",
+  { no: "Vi", no_mid: "vi", pt_bor: "Nós moramos em Oslo.", pt_bor_q: "Moramos em Oslo?", pt_bor_pas: "Nós morávamos em Oslo antes.",
+    pt_job: "Nós trabalhamos na Noruega.", pt_job_q: "Trabalhamos na Noruega?" },
+  { no: "Dere", no_mid: "dere", pt_bor: "Vocês moram em Oslo.", pt_bor_q: "Vocês moram em Oslo?", pt_bor_pas: "Vocês moravam em Oslo antes.",
     pt_job: "Vocês trabalham na Noruega.", pt_job_q: "Vocês trabalham na Noruega?" },
-  { no: "De", pt_bor: "Eles moram em Oslo.", pt_bor_q: "Eles moram em Oslo?", pt_bor_pas: "Eles moravam em Oslo antes.",
+  { no: "De", no_mid: "de", pt_bor: "Eles moram em Oslo.", pt_bor_q: "Eles moram em Oslo?", pt_bor_pas: "Eles moravam em Oslo antes.",
     pt_job: "Eles trabalham na Noruega.", pt_job_q: "Eles trabalham na Noruega?" },
 ];
 GENERATED = GENERATED.concat(genMulti("basico", [{ no: "{} bor i Oslo.", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_bor", "pronoun_subj"));
-GENERATED = GENERATED.concat(genMulti("basico", [{ no: "Bor {} i Oslo?", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_bor_q", "pronoun_subj"));
+GENERATED = GENERATED.concat(genMulti("basico", [{ no: "Bor {} i Oslo?", pt: "{}" }], PRONOMES_SUJEITO, "no_mid", "pt_bor_q", "pronoun_subj"));
 GENERATED = GENERATED.concat(genMulti("basico", [{ no: "{} bodde i Oslo før.", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_bor_pas", "pronoun_subj"));
 GENERATED = GENERATED.concat(genMulti("basico", [{ no: "{} jobber i Norge.", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_job", "pronoun_subj"));
-GENERATED = GENERATED.concat(genMulti("basico", [{ no: "Jobber {} i Norge?", pt: "{}" }], PRONOMES_SUJEITO, "no", "pt_job_q", "pronoun_subj"));
+GENERATED = GENERATED.concat(genMulti("basico", [{ no: "Jobber {} i Norge?", pt: "{}" }], PRONOMES_SUJEITO, "no_mid", "pt_job_q", "pronoun_subj"));
 
 const NUMEROS_BANK = [
   { no: "en", pt: "um" }, { no: "to", pt: "dois" }, { no: "tre", pt: "três" }, { no: "fire", pt: "quatro" },
