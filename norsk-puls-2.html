@@ -228,6 +228,42 @@
   .opt-btn.correct { border-color: var(--green); background: rgba(74,222,140,0.1); animation: popIn 0.25s ease; }
   .opt-btn.wrong { border-color: var(--red); background: rgba(239,111,108,0.1); animation: popIn 0.25s ease; }
   .opt-btn.dim { border-color: var(--border); opacity: 0.5; }
+
+  /* ---- Exercícios: construir a frase (word bank / chips, estilo Duolingo) ---- */
+  .word-bank-container { margin-bottom: 16px; }
+  .sentence-builder-target {
+    min-height: 50px;
+    border-bottom: 2px solid var(--border2);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+    align-items: center;
+  }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  .word-bank-pool { display: flex; flex-wrap: wrap; gap: 8px; }
+  .word-chip {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-bottom: 3px solid var(--border2); /* Efeito 3D típico do Duolingo */
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.1s;
+  }
+  .word-chip:active {
+    transform: translateY(2px);
+    border-bottom-width: 1px;
+  }
+  .word-chip.used {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  .word-chip.correct { border-color: var(--green); background: rgba(74,222,140,0.1); animation: popIn 0.25s ease; }
+  .word-chip.wrong { border-color: var(--red); background: rgba(239,111,108,0.1); animation: popIn 0.25s ease; }
   @keyframes popIn {
     0% { transform: scale(0.94); }
     60% { transform: scale(1.03); }
@@ -1972,7 +2008,7 @@ function renderExercises() {
     const targetWords = target.split(" ").filter(Boolean);
     const answerHtml = buildAnswer.length
       ? buildAnswer.map((t, i) => {
-          let cls = "opt-btn";
+          let cls = "word-chip";
           if (buildWrong) {
             const correctWord = (targetWords[i] || "").toLowerCase();
             cls += t.text.toLowerCase() === correctWord ? " correct" : " wrong";
@@ -1980,7 +2016,7 @@ function renderExercises() {
           return `<button class="${cls}" data-tile="${t.id}" data-zone="answer">${t.text}</button>`;
         }).join("")
       : `<span style="color:var(--muted);font-size:13px">toca nas palavras abaixo, pela ordem certa</span>`;
-    const bankHtml = buildBank.map(t => `<button class="opt-btn" data-tile="${t.id}" data-zone="bank">${t.text}</button>`).join("");
+    const bankHtml = buildBank.map(t => `<button class="word-chip" data-tile="${t.id}" data-zone="bank">${t.text}</button>`).join("");
 
     const listenBtn = `<div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnExListenTop">🔊 Ouvir</button></div>`;
     const promptHtml = exMode === "build"
@@ -2024,10 +2060,11 @@ function renderExercises() {
         </div>
         ${modeBar}
         ${promptHtml}
-        <p class="card-label mono" style="margin-bottom:8px">a tua frase:</p>
-        <div class="options" id="buildAnswerZone" style="min-height:52px;border:1px dashed var(--border);border-radius:12px;padding:10px;margin-bottom:16px">${answerHtml}</div>
-        <p class="card-label mono" style="margin-bottom:8px">blocos disponíveis:</p>
-        <div class="options" id="buildBankZone">${bankHtml}</div>
+        <div class="word-bank-container">
+          <div class="sentence-builder-target" id="answerArea">${answerHtml}</div>
+          <hr class="divider">
+          <div class="word-bank-pool" id="wordPool">${bankHtml}</div>
+        </div>
         ${resultBlock}
         <div class="nav-row" style="display:flex;gap:8px;align-items:center;margin-top:16px">
           <button class="news-icon-btn" id="btnExPrev" ${viewIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
@@ -2309,7 +2346,7 @@ function attachHandlers() {
         const item = order[viewIdx];
         speak(fullSentence(item), () => {});
       };
-      document.querySelectorAll('#buildBankZone [data-tile]').forEach(b => {
+      document.querySelectorAll('#wordPool [data-tile]').forEach(b => {
         b.onclick = () => {
           if (buildChecked) return;
           const id = b.dataset.tile;
@@ -2320,7 +2357,7 @@ function attachHandlers() {
           render();
         };
       });
-      document.querySelectorAll('#buildAnswerZone [data-tile]').forEach(b => {
+      document.querySelectorAll('#answerArea [data-tile]').forEach(b => {
         b.onclick = () => {
           if (buildChecked) return;
           const id = b.dataset.tile;
