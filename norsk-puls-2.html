@@ -4,6 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Norsk Puls</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0B1220" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Norsk Puls" />
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -151,19 +158,6 @@
 
   .error-text { color: var(--red); font-size: 13px; margin-top: 12px; }
   .heard-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
-  .speed-row { display: flex; align-items: center; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
-  .speed-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
-  .speed-btn {
-    font-size: 12px;
-    padding: 5px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--border2);
-    background: none;
-    color: var(--muted);
-    cursor: pointer;
-    font-family: inherit;
-  }
-  .speed-btn.active { border-color: var(--green); color: var(--green); }
   .phon-toggle {
     font-size: 12px;
     padding: 5px 10px;
@@ -278,11 +272,13 @@
   }
   .feedback-sheet.hidden { display: none; }
   .feedback-sheet.correct { border-top: 2px solid var(--green); background: #0f2318; }
+  .feedback-sheet.warn { border-top: 2px solid var(--amber); background: #2a2010; }
   .feedback-sheet.wrong { border-top: 2px solid var(--red); background: #2a1414; }
   .feedback-content { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
   .feedback-icon { font-size: 28px; line-height: 1; }
   .feedback-text-wrap h3 { margin: 0; font-size: 16px; font-family: 'Space Grotesk', sans-serif; }
   .feedback-sheet.correct .feedback-text-wrap h3 { color: var(--green); }
+  .feedback-sheet.warn .feedback-text-wrap h3 { color: var(--amber); }
   .feedback-sheet.wrong .feedback-text-wrap h3 { color: var(--red); }
   .feedback-text-wrap p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
   .feedback-text-wrap p:empty { display: none; }
@@ -291,6 +287,7 @@
     font-family: inherit; font-weight: 600; font-size: 14px; letter-spacing: 0.03em;
   }
   .feedback-sheet.correct .btn-continue { background: var(--green); color: #0B1220; }
+  .feedback-sheet.warn .btn-continue { background: var(--amber); color: #0B1220; }
   .feedback-sheet.wrong .btn-continue { background: var(--red); color: #0B1220; }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   @keyframes popIn {
@@ -798,6 +795,14 @@ GENERATED = GENERATED.concat(genMulti("geral", [
   { no: "Er dette en {}?", pt: "Isto é {}?" },
   { no: "{} er her.", pt: "{} está aqui." },
 ], OBJETOS, "no", "pt", "object"));
+GENERATED = GENERATED.concat(genMulti("geral", [
+  { no: "Jeg trenger {}.", pt: "Eu preciso de {}." },
+  { no: "Trenger du {}?", pt: "Precisas de {}?" },
+], OBJETOS, "no", "pt", "object"));
+GENERATED = GENERATED.concat(genMulti("geral", [
+  { no: "Jeg så {} i går.", pt: "Eu vi {} ontem." },
+  { no: "Så du {} i går?", pt: "Viste {} ontem?" },
+], OBJETOS, "no", "pt", "object"));
 
 GENERATED = GENERATED.concat(genMulti("transporte", [
   { no: "Når kommer {}?", pt: "Quando chega {}?" },
@@ -814,10 +819,17 @@ GENERATED = GENERATED.concat(genMulti("bolig", [
   { no: "Leiligheten har {}.", pt: "O apartamento tem {}." },
   { no: "Har leiligheten {}?", pt: "O apartamento tem {}?" },
 ], BOLIG_COMODIDADES, "no", "pt", "housing_amenity"));
+GENERATED = GENERATED.concat(genMulti("bolig", [
+  { no: "Jeg leter etter en leilighet med {}.", pt: "Estou à procura de um apartamento com {}." },
+  { no: "Leter du etter en leilighet med {}?", pt: "Estás à procura de um apartamento com {}?" },
+], BOLIG_COMODIDADES, "no", "pt", "housing_amenity"));
 
 GENERATED = GENERATED.concat(genMulti("bolig", [
   { no: "Husleien er {} kroner i måneden.", pt: "A renda é de {} coroas por mês." },
   { no: "Er husleien {} kroner i måneden?", pt: "A renda é de {} coroas por mês?" },
+], HUSLEIE_VALORES, "no", "pt", "rent_value"));
+GENERATED = GENERATED.concat(genMulti("bolig", [
+  { no: "Husleien var {} kroner i fjor.", pt: "A renda era de {} coroas no ano passado." },
 ], HUSLEIE_VALORES, "no", "pt", "rent_value"));
 
 GENERATED = GENERATED.concat(genMulti("jobbsoking", [
@@ -902,18 +914,26 @@ GENERATED = GENERATED.concat(genMulti("numeros", [
 ], NUMEROS_BANK, "no", "pt", "number"));
 
 const DAYPARTS = [
-  { no: "morgen", pt: "Bom dia!" }, { no: "kveld", pt: "Boa noite!" },
-  { no: "dag", pt: "Tenha um bom dia!" }, { no: "helg", pt: "Bom fim de semana!" },
+  { no: "morgen", pt: "Bom dia!", pt_nice: "Tem uma boa manhã!" },
+  { no: "kveld", pt: "Boa noite!", pt_nice: "Tem uma boa noite!" },
+  { no: "dag", pt: "Tenha um bom dia!", pt_nice: "Tem um bom dia!" },
+  { no: "helg", pt: "Bom fim de semana!", pt_nice: "Tem um bom fim de semana!" },
 ];
 GENERATED = GENERATED.concat(genMulti("cumprimentos", [{ no: "God ___!", pt: "{}" }], DAYPARTS, "no", "pt", "daypart"));
+GENERATED = GENERATED.concat(genMulti("cumprimentos", [{ no: "Ha en fin ___!", pt: "{}" }], DAYPARTS, "no", "pt_nice", "daypart_nice"));
 
 const CUMPRIMENTOS_VERBOS = [
-  { no: "hilser", pt: "cumprimenta" }, { no: "smiler", pt: "sorri" }, { no: "vinker", pt: "acena" },
+  { no: "hilser", pt: "cumprimenta", pt_pas: "cumprimentou" },
+  { no: "smiler", pt: "sorri", pt_pas: "sorriu" },
+  { no: "vinker", pt: "acena", pt_pas: "acenou" },
 ];
 GENERATED = GENERATED.concat(genMulti("cumprimentos", [
   { no: "Han ___ på meg.", pt: "Ele {} para mim." },
   { no: "___ han på meg?", pt: "Ele {} para mim?" },
 ], CUMPRIMENTOS_VERBOS, "no", "pt", "greeting_verb"));
+GENERATED = GENERATED.concat(genMulti("cumprimentos", [
+  { no: "Hun ___ på meg i går.", pt: "Ela {} para mim ontem." },
+], CUMPRIMENTOS_VERBOS.map(v => ({ no: v.no === "hilser" ? "hilste" : v.no === "smiler" ? "smilte" : "vinket", pt: v.pt_pas })), "no", "pt", "greeting_verb_pas"));
 
 const MENU_ITENS = [
   { no: "brød", pt: "pão" }, { no: "egg", pt: "ovos" }, { no: "fisk", pt: "peixe" }, { no: "suppe", pt: "sopa" },
@@ -923,6 +943,10 @@ GENERATED = GENERATED.concat(genMulti("restaurante", [
   { no: "Jeg vil gjerne ha ___.", pt: "Gostava de ter {}." },
   { no: "Vil du ha ___?", pt: "Queres {}?" },
 ], MENU_ITENS, "no", "pt", "food"));
+GENERATED = GENERATED.concat(genMulti("restaurante", [
+  { no: "Jeg spiste ___ i går.", pt: "Comi {} ontem." },
+  { no: "Spiste du ___ i går?", pt: "Comeste {} ontem?" },
+], MENU_ITENS, "no", "pt", "food"));
 
 const DRIKKE = [
   { no: "kaffe", pt: "café" }, { no: "te", pt: "chá" }, { no: "vann", pt: "água" },
@@ -931,6 +955,10 @@ const DRIKKE = [
 GENERATED = GENERATED.concat(genMulti("restaurante", [
   { no: "Kan jeg få litt ___?", pt: "Posso ter um pouco de {}?" },
   { no: "Jeg drikker ___.", pt: "Eu bebo {}." },
+], DRIKKE, "no", "pt", "drink"));
+GENERATED = GENERATED.concat(genMulti("restaurante", [
+  { no: "Liker du ___?", pt: "Gostas de {}?" },
+  { no: "Jeg liker ikke ___.", pt: "Não gosto de {}." },
 ], DRIKKE, "no", "pt", "drink"));
 
 const FAMILIA = [
@@ -1846,18 +1874,23 @@ function renderPractice() {
   if (heard) {
     let pillsHtml = "", scoreHtml = "", feedbackHtml = "";
     if (result) {
-      const c = result.overall >= 80 ? "var(--green)" : result.overall >= 50 ? "var(--amber)" : "var(--red)";
+      const c = result.overall >= 80 ? "var(--green)" : result.overall >= 60 ? "var(--amber)" : "var(--red)";
       scoreHtml = `<div class="match-row">correspondência: <span class="score-pill" style="color:${c};border-color:${c}">${result.overall}%</span></div>`;
       pillsHtml = `<div class="pills">` + result.results.map(r => {
         const bg = r.score >= 0.8 ? "rgba(74,222,140,0.18)" : r.score >= 0.5 ? "rgba(240,193,104,0.18)" : "rgba(239,111,108,0.18)";
         const border = r.score >= 0.8 ? "var(--green)" : r.score >= 0.5 ? "var(--amber)" : "var(--red)";
         return `<span class="word-pill" style="background:${bg};border-color:${border}">${r.word}</span>`;
       }).join("") + `</div>`;
-      const msg = result.overall >= 80 ? "Muito bem! Pronúncia sólida." : result.overall >= 50 ? "Está no bom caminho — repete devagar as palavras a amarelo/vermelho." : "Ouve a frase outra vez e tenta repetir palavra a palavra.";
+      const msg = result.overall >= 80 ? "Muito bem! Pronúncia sólida." : result.overall >= 60 ? "Está no bom caminho — repete devagar as palavras a amarelo/vermelho." : "Ouve a frase outra vez e tenta repetir palavra a palavra.";
       feedbackHtml = `<p class="feedback-text">${msg}</p>`;
     }
     heardBlock = `<div class="heard-block"><p class="heard-label">ouvi: <span style="color:var(--text)">${heard}</span></p>${scoreHtml}${pillsHtml}${feedbackHtml}</div>`;
   }
+  // Três níveis, como no Duolingo: ≥80% avança (verde); 60-79% e <60% têm
+  // de repetir a pronúncia (amarelo/vermelho) — só o botão pequeno de
+  // "Próxima frase" desaparece nesses dois casos, para não dar para saltar
+  // sem repetir.
+  const tier = result ? (result.overall >= 80 ? "correct" : result.overall >= 60 ? "warn" : "wrong") : null;
 
   return `
     <div class="card">
@@ -1872,11 +1905,9 @@ function renderPractice() {
           ? `<button class="btn ${listening ? "listening" : ""}" id="btnFalar">🎙️ ${listening ? "A ouvir... (toca para parar)" : "Falar"}</button>`
           : `<span class="error-text">reconhecimento de voz não suportado neste navegador</span>`}
       </div>
-      <div class="speed-row">
-        <span class="speed-label">velocidade:</span>
-        <button class="speed-btn ${newsRate <= 0.65 ? "active" : ""}" data-rate="0.6">🐢 lenta</button>
-        <button class="speed-btn ${newsRate > 0.65 && newsRate <= 0.95 ? "active" : ""}" data-rate="0.9">🚶 normal</button>
-        <button class="speed-btn ${newsRate > 0.95 ? "active" : ""}" data-rate="1.1">🏃 rápida</button>
+      <div class="news-speed-block">
+        <div class="news-speed-label"><span>velocidade</span><span class="mono">${newsRate.toFixed(2)}x</span></div>
+        <input class="news-speed-slider" id="practiceSpeedSlider" type="range" min="0.5" max="1.0" step="0.05" value="${newsRate}">
       </div>
       ${(() => {
         const voices = getNorwegianVoices();
@@ -1887,9 +1918,24 @@ function renderPractice() {
       ${heardBlock}
       <div class="nav-row" style="display:flex;gap:8px;margin-top:8px">
         <button class="news-icon-btn" id="btnPracPrev" ${practiceIdx <= 0 ? "disabled" : ""} title="Anterior">◀</button>
-        <button class="btn next" id="btnNext" style="flex:1">Próxima frase →</button>
+        ${tier ? "" : `<button class="btn next" id="btnNext" style="flex:1">Próxima frase →</button>`}
       </div>
+      ${tier ? `<div style="height:100px"></div>` : ""}
     </div>
+    ${tier === "correct" ? feedbackSheetHtml({
+      tier: "correct",
+      title: "Muito bem!",
+      detail: `Pronúncia sólida — correspondência de ${result.overall}%.`,
+      btnId: "btnNext",
+      btnLabel: "CONTINUAR",
+    }) : ""}
+    ${(tier === "warn" || tier === "wrong") ? feedbackSheetHtml({
+      tier,
+      title: tier === "warn" ? "Quase lá!" : "Repete outra vez",
+      detail: `Correspondência de ${result.overall}% — repete a frase, focando nas palavras a ${tier === "warn" ? "amarelo" : "amarelo e vermelho"} acima.`,
+      btnId: "btnPracRetry",
+      btnLabel: "TENTAR NOVAMENTE",
+    }) : ""}
     <p class="note">Nota: a pontuação compara o que o reconhecimento de voz percebeu com a frase-alvo — é um bom indicador para começar, mas ainda não é uma análise fonética completa. O teu progresso nesta secção fica guardado automaticamente.</p>
   `;
 }
@@ -1994,15 +2040,20 @@ function renderWrite() {
 }
 
 // Painel de feedback fixo ao fundo do ecrã (estilo Duolingo), usado depois
-// de responder em escolha múltipla / construir frase / ditado / traduzir.
-// btnId é sempre um id que já existe no resto do código — o botão
-// "CONTINUAR" reaproveita o handler que já estava ligado a esse id, por
-// isso esta função só muda a aparência, nunca a lógica de navegação.
-function feedbackSheetHtml({ correct, title, detail, btnId, btnLabel }) {
+// de responder em escolha múltipla / construir frase / ditado / traduzir /
+// praticar. btnId é sempre um id que já existe no resto do código — o
+// botão reaproveita o handler que já estava ligado a esse id, por isso
+// esta função só muda a aparência, nunca a lógica de navegação.
+// tier: "correct" (verde) | "warn" (amarelo) | "wrong" (vermelho).
+// Para compatibilidade, passar correct:true/false também funciona (vira
+// tier "correct"/"wrong").
+function feedbackSheetHtml({ correct, tier, title, detail, btnId, btnLabel }) {
+  const t = tier || (correct ? "correct" : "wrong");
+  const icon = t === "correct" ? "✅" : t === "warn" ? "🔶" : "❌";
   return `
-    <div id="feedbackSheet" class="feedback-sheet ${correct ? "correct" : "wrong"}">
+    <div id="feedbackSheet" class="feedback-sheet ${t}">
       <div class="feedback-content">
-        <div class="feedback-icon" id="feedbackIcon">${correct ? "✅" : "❌"}</div>
+        <div class="feedback-icon" id="feedbackIcon">${icon}</div>
         <div class="feedback-text-wrap">
           <h3 id="feedbackTitle">${title}</h3>
           <p id="feedbackDetail">${detail || ""}</p>
@@ -2171,6 +2222,7 @@ function renderExercises() {
           ${!isLive ? `<button class="btn" id="btnExJumpLive" style="flex:1">↩️ voltar ao meu progresso</button>` : `<span style="flex:1"></span>`}
           <button class="news-icon-btn" id="btnExNextNav" ${viewIdx >= order.length - 1 ? "disabled" : ""} title="Seguinte">▶</button>
         </div>
+        ${(buildChecked || buildGaveUp) ? `<div style="height:100px"></div>` : ""}
       </div>
     `;
   }
@@ -2199,6 +2251,7 @@ function renderExercises() {
         <span class="mono" style="font-size:12px;color:var(--muted)">progresso: ${cursor}/${order.length}</span>
       </div>
       ${modeBar}
+      <div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnExListenChoice">🔊 Ouvir</button></div>
       <p class="sentence display">${item.blank}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
@@ -2347,19 +2400,23 @@ function attachHandlers() {
     };
     const btnNext = document.getElementById("btnNext");
     if (btnNext) btnNext.onclick = () => { touchStreak(); goTo(practiceIdx + 1); };
+    const btnPracRetry = document.getElementById("btnPracRetry");
+    if (btnPracRetry) btnPracRetry.onclick = () => {
+      heard = ""; result = null; micError = "";
+      render();
+    };
     const btnPracPrev = document.getElementById("btnPracPrev");
     if (btnPracPrev) btnPracPrev.onclick = () => goTo(practiceIdx - 1);
     const btnRestartPractice = document.getElementById("btnRestartPractice");
     if (btnRestartPractice) btnRestartPractice.onclick = () => goTo(0);
     const btnTogglePhon = document.getElementById("btnTogglePhon");
     if (btnTogglePhon) btnTogglePhon.onclick = () => { showPhonetic = !showPhonetic; render(); };
-    document.querySelectorAll(".speed-btn").forEach(b => {
-      b.onclick = () => {
-        newsRate = parseFloat(b.dataset.rate);
-        saveNewsRate(newsRate);
-        render();
-      };
-    });
+    const practiceSpeedSlider = document.getElementById("practiceSpeedSlider");
+    if (practiceSpeedSlider) practiceSpeedSlider.onchange = () => {
+      newsRate = parseFloat(practiceSpeedSlider.value);
+      saveNewsRate(newsRate);
+      render();
+    };
     const voiceSelectP = document.getElementById("practiceVoiceSelect");
     if (voiceSelectP) voiceSelectP.onchange = () => {
       newsVoiceName = voiceSelectP.value;
@@ -2568,6 +2625,14 @@ function attachHandlers() {
           render();
         };
       });
+      const btnExListenChoice = document.getElementById("btnExListenChoice");
+      if (btnExListenChoice) btnExListenChoice.onclick = () => {
+        const order = resolveOrder("ex", theme);
+        const cursor = getCursor("ex", theme, order.length);
+        const viewIdx = getViewIdx("ex", theme, order, cursor);
+        const item = order[viewIdx];
+        speak(fullSentence(item), () => {});
+      };
       const btnExNext = document.getElementById("btnExNext");
       if (btnExNext) btnExNext.onclick = () => {
         const order = resolveOrder("ex", theme);
@@ -3260,6 +3325,16 @@ document.querySelectorAll("#mainTabs .tab-btn").forEach(btn => {
 });
 
 render();
+</script>
+<script>
+  // Regista o service worker para a app funcionar offline e ficar instalável.
+  // Se falhar (ex.: aberta em file:// em vez de https://), a app continua a
+  // funcionar normalmente, só sem essas duas vantagens extra.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>
