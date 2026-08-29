@@ -107,6 +107,7 @@
   .sentence { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
   .tap-word { cursor: pointer; border-bottom: 1px dotted var(--muted2); border-radius: 3px; }
   .tap-word:active { color: var(--violet); background: rgba(139,127,232,0.12); }
+  .tap-word-holding { color: var(--green); background: rgba(74,222,140,0.18); }
   #wordToast {
     position: fixed; top: 70px; left: 50%; transform: translate(-50%, -8px);
     background: var(--surface); border: 1px solid var(--border2); border-radius: 999px;
@@ -116,6 +117,23 @@
     z-index: 90; max-width: 88%; text-align: center;
   }
   #wordToast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---- Modal de gramática ---- */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    z-index: 200; justify-content: center; align-items: center; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    background: var(--surface); border: 1px solid var(--border2); width: 100%; max-width: 480px;
+    border-radius: 16px; padding: 20px; max-height: 80vh; overflow-y: auto;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .modal-header h3 { font-family: 'Space Grotesk', sans-serif; font-size: 17px; margin: 0; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-body p { margin: 0 0 12px; font-size: 14px; line-height: 1.55; }
+  .modal-body p:last-child { margin-bottom: 0; }
+  .modal-body b { color: var(--green); }
   .translation { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
 
   .btn-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -408,6 +426,7 @@
   <div class="header-row">
     <h1 class="display">Norsk <span class="aurora-text">Puls</span></h1>
     <div style="display:flex;align-items:center;gap:8px">
+      <button class="level-badge" id="grammarBtn" style="cursor:pointer;font:inherit" title="Gramática e suporte">📖</button>
       <span class="level-badge" id="streakBadge" style="display:none"></span>
       <button class="level-badge" id="levelBadge" style="cursor:pointer;font:inherit" data-tab="stats">nível 1 / 3</button>
     </div>
@@ -429,6 +448,15 @@
   <div id="content"></div>
 </div>
 <div id="wordToast"></div>
+<div id="grammarModal" class="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="grammarModalTitle">📖 Gramática</h3>
+      <button id="grammarModalClose" class="modal-close" aria-label="Fechar">✕</button>
+    </div>
+    <div id="grammarModalBody" class="modal-body"></div>
+  </div>
+</div>
 
 <script>
 // ---------- Data ----------
@@ -1758,6 +1786,89 @@ function buildWordMap(text) {
   let m, idx = 0;
   while ((m = re.exec(text))) { map.push({ start: m.index, end: m.index + m[0].length, idx }); idx++; }
   return map;
+}
+
+// ---------- Notas de gramática por tema (modal "📖 Gramática") ----------
+const GRAMMAR_NOTES = {
+  basico: { title: "Básico", tips: [
+    "<b>Pronomes:</b> jeg=eu, du=tu, han=ele, hun=ela, vi=nós, dere=vós/vocês, de=eles/elas.",
+    "O verbo <b>não muda</b> com a pessoa: \"jeg er, du er, han er...\" é sempre \"er\". O mesmo vale para qualquer verbo no presente — só há uma forma para todas as pessoas.",
+  ]},
+  cumprimentos: { title: "Cumprimentos", tips: [
+    "\"God morgen/dag/kveld\" (bom dia/boa tarde/boa noite) são fórmulas fixas, não variam.",
+    "\"Takk\" (obrigado) não tem género nem varia com quem fala.",
+  ]},
+  familia: { title: "Família", tips: [
+    "<b>Género dos substantivos:</b> a maioria das palavras de família são \"en\": en far, en bror, en sønn.",
+    "Algumas também podem ser \"ei\" (feminino): ei mor, ei søster, ei datter — mas \"en mor/en søster/en datter\" também está correto em bokmål.",
+  ]},
+  numeros: { title: "Números", tips: [
+    "1 a 12 têm palavra própria: en/ett, to, tre, fire, fem, seks, sju, åtte, ni, ti, elleve, tolv.",
+    "13 a 19 juntam \"-ten\": tretten, fjorten, femten...",
+    "As dezenas terminam em \"-ti\": tjue (20), tretti (30), førti (40)...",
+  ]},
+  restaurante: { title: "Restaurante", tips: [
+    "\"Kan jeg få...?\" = \"Posso ter...?\" — forma simples e educada de pedir.",
+    "\"Jeg vil gjerne ha...\" = \"Gostava de ter...\" — um pouco mais formal.",
+    "Acrescentar \"takk\" no fim do pedido torna-o mais simpático.",
+  ]},
+  trabalho: { title: "Trabalho", tips: [
+    "Ao dizer a profissão, <b>não se usa artigo</b>: \"Jeg er elektriker\" (NÃO \"Jeg er en elektriker\") — diferente do português, que diz \"sou UM eletricista\".",
+  ]},
+  apresentacao: { title: "Apresentação", tips: [
+    "\"Jeg kommer fra Portugal\" = de onde vens (país de origem).",
+    "As nacionalidades como adjetivo não levam maiúscula: \"jeg er portugisisk\" (minúscula).",
+  ]},
+  quotidiano: { title: "Quotidiano", tips: [
+    "<b>Presente</b> regular termina em \"-er\": bor, jobber, spiser.",
+    "<b>Pretérito</b> (passado) regular termina em \"-et\" ou \"-te\": bodde, jobbet, spiste.",
+    "Não há conjugação por pessoa — só muda entre presente e passado.",
+  ]},
+  viagem: { title: "Viagem", tips: [
+    "\"til\" = destino (para onde vais): \"Jeg reiser til Norge\".",
+    "\"fra\" = origem (de onde vens): \"Jeg reiser fra Portugal\".",
+  ]},
+  conversacao: { title: "Conversação", tips: [
+    "Palavras de pergunta: hva=o quê, hvor=onde, hvem=quem, når=quando, hvordan=como, hvorfor=porquê.",
+    "Nas perguntas, o verbo vem logo a seguir à palavra de pergunta: \"Hva heter du?\".",
+    "\"Jo\" é um \"sim\" especial — usa-se só para contrariar uma pergunta negativa: \"Snakker du ikke norsk? — Jo!\" (contrariando: sim, falo).",
+  ]},
+  geral: { title: "Geral", tips: [
+    "Norueguês tem três géneros: <b>en</b> (masc.: en bok), <b>ei</b> (fem., opcional — \"en bok\" também serve), <b>et</b> (neutro: et hus).",
+    "O artigo definido (o/a) junta-se ao FIM da palavra, não é uma palavra à parte: en bok → boka/boken; et hus → huset.",
+  ]},
+  transporte: { title: "Transporte", tips: [
+    "Sem artigo: buss, tog, bil (um autocarro, um comboio, um carro).",
+    "Com artigo definido (o/a): bussen, toget, bilen — o \"o/a\" junta-se ao fim da palavra (-en/-et), não é uma palavra separada.",
+  ]},
+  bolig: { title: "Bolig (arrendar)", tips: [
+    "\"Husleie\" = renda; \"depositum\" = caução.",
+    "\"Møblert\" = mobilado; \"ledig\" = disponível/livre.",
+  ]},
+  jobbsoking: { title: "Jobbsøking", tips: [
+    "\"Søke om jobb\" = candidatar-se a um emprego.",
+    "\"Fast stilling\" = posição permanente; \"vikariat\" = substituição temporária.",
+  ]},
+  industri: { title: "Indústria", tips: [
+    "Tal como noutras profissões, o equipamento de segurança não leva artigo quando é uma instrução geral: \"Bruk hjelm!\" (Usa capacete!).",
+  ]},
+  verbtider: { title: "Verbtider (tempos verbais)", tips: [
+    "Presente → Pretérito: spiser→spiste, bor→bodde, går→gikk, har→hadde, er→var.",
+    "Regra geral: verbos regulares no presente \"-er\" passam a \"-et\" ou \"-te\" no pretérito.",
+    "Alguns verbos são irregulares e têm mesmo de ser decorados: \"gå\"→\"gikk\", \"ha\"→\"hadde\", \"være\"→\"var\".",
+  ]},
+  _default: { title: "Notas gerais", tips: [
+    "Este tema ainda não tem notas de gramática próprias. Em geral: o verbo norueguês não muda com a pessoa (jeg/du/han... usam sempre a mesma forma), e os artigos \"o/a\" juntam-se ao FIM da palavra em vez de virem antes dela.",
+  ]},
+};
+function openGrammarModal() {
+  const notes = GRAMMAR_NOTES[currentTheme] || GRAMMAR_NOTES._default;
+  document.getElementById("grammarModalTitle").textContent = "📖 " + notes.title;
+  document.getElementById("grammarModalBody").innerHTML = notes.tips.map(t => `<p>${t}</p>`).join("");
+  document.getElementById("grammarModal").classList.add("open");
+}
+function closeGrammarModal() {
+  document.getElementById("grammarModal").classList.remove("open");
 }
 
 // ---------- Toca numa palavra norueguesa para veres o significado ----------
@@ -3716,11 +3827,42 @@ document.querySelectorAll("#mainTabs .tab-btn").forEach(btn => {
 // Toca em qualquer palavra norueguesa (.tap-word), em qualquer ecrã, a
 // qualquer momento — ligado uma única vez ao document, por isso continua a
 // funcionar depois de cada render() sem precisar de ser religado.
+// Toque curto = tradução; toque longo (~450ms) = ouvir a palavra a ser
+// pronunciada. O longPressFired evita que o toque curto também dispare
+// depois de um toque longo já ter sido tratado.
+let tapWordTimer = null, tapWordLongPressed = false;
+function clearTapWordTimer() { if (tapWordTimer) { clearTimeout(tapWordTimer); tapWordTimer = null; } }
+document.addEventListener("pointerdown", (e) => {
+  const el = e.target.closest(".tap-word");
+  if (!el) return;
+  tapWordLongPressed = false;
+  el.classList.add("tap-word-holding");
+  tapWordTimer = setTimeout(() => {
+    tapWordLongPressed = true;
+    el.classList.remove("tap-word-holding");
+    speak(el.dataset.word, () => {});
+  }, 450);
+});
+["pointerup", "pointercancel", "pointerleave"].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    const el = e.target.closest(".tap-word");
+    if (el) el.classList.remove("tap-word-holding");
+    clearTapWordTimer();
+  }, true);
+});
 document.addEventListener("click", (e) => {
   const el = e.target.closest(".tap-word");
   if (!el) return;
+  if (tapWordLongPressed) { tapWordLongPressed = false; return; }
   showWordToast(el.dataset.word);
 });
+
+// Modal de gramática — botão fixo no cabeçalho, fora do ciclo de render().
+document.getElementById("grammarBtn").onclick = openGrammarModal;
+document.getElementById("grammarModalClose").onclick = closeGrammarModal;
+document.getElementById("grammarModal").onclick = (e) => {
+  if (e.target.id === "grammarModal") closeGrammarModal();
+};
 
 render();
 </script>
