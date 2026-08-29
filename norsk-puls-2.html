@@ -105,6 +105,17 @@
   }
   .card-label { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
   .sentence { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
+  .tap-word { cursor: pointer; border-bottom: 1px dotted var(--muted2); border-radius: 3px; }
+  .tap-word:active { color: var(--violet); background: rgba(139,127,232,0.12); }
+  #wordToast {
+    position: fixed; top: 70px; left: 50%; transform: translate(-50%, -8px);
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 999px;
+    padding: 9px 18px; font-size: 13px; color: var(--text);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 90; max-width: 88%; text-align: center;
+  }
+  #wordToast.show { opacity: 1; transform: translate(-50%, 0); }
   .translation { color: var(--muted); font-size: 14px; margin: 0 0 20px; }
 
   .btn-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -417,6 +428,7 @@
 
   <div id="content"></div>
 </div>
+<div id="wordToast"></div>
 
 <script>
 // ---------- Data ----------
@@ -1748,6 +1760,29 @@ function buildWordMap(text) {
   return map;
 }
 
+// ---------- Toca numa palavra norueguesa para veres o significado ----------
+// Um único sistema global, usado em qualquer frase norueguesa da app.
+// wordTapHtml() envolve cada palavra num <span> tocável; o clique é
+// tratado por delegação de eventos no document (ver mais abaixo), por isso
+// funciona mesmo depois de o ecrã ser redesenhado — não precisa de ser
+// religado a cada render().
+function wordTapHtml(text) {
+  return String(text).split(" ").map(w => {
+    const clean = w.replace(/[.,!?;:]/g, "");
+    if (!clean) return w;
+    return `<span class="tap-word" data-word="${clean.replace(/"/g, "&quot;")}">${w}</span>`;
+  }).join(" ");
+}
+function showWordToast(word) {
+  const toast = document.getElementById("wordToast");
+  if (!toast) return;
+  const g = glossFor(word);
+  toast.textContent = g ? `${word} — ${g}` : `${word} — significado não disponível`;
+  toast.classList.add("show");
+  clearTimeout(showWordToast._t);
+  showWordToast._t = setTimeout(() => toast.classList.remove("show"), 2600);
+}
+
 function speak(text, onError) {
   if (!window.speechSynthesis) { onError && onError("A síntese de voz não é suportada neste navegador."); return; }
   const doSpeak = () => {
@@ -2048,7 +2083,10 @@ function renderNews() {
 
   const bodyHtml = article.sentences.map((s, i) => {
     const words = s.no.match(/\S+/g) || [];
-    const wordsHtml = words.map((w, wi) => `<span id="w-${i}-${wi}" class="news-word">${w}</span>`).join(" ");
+    const wordsHtml = words.map((w, wi) => {
+      const clean = w.replace(/[.,!?;:]/g, "");
+      return `<span id="w-${i}-${wi}" class="news-word tap-word" data-word="${clean.replace(/"/g, "&quot;")}">${w}</span>`;
+    }).join(" ");
     return `<p class="news-sent-no" id="sent-${i}">${wordsHtml}</p><p class="news-sent-pt">${s.pt}</p>`;
   }).join("");
 
@@ -2119,7 +2157,7 @@ function renderPractice() {
   return `
     <div class="card">
       <p class="card-label mono">frase ${practiceIdx + 1} de ${p.length}</p>
-      <p class="sentence display">${target}</p>
+      <p class="sentence display">${wordTapHtml(target)}</p>
       <p class="translation">${item.pt}</p>
       <button class="btn phon-toggle" id="btnTogglePhon" style="margin-bottom:16px">${showPhonetic ? "🙈 Esconder pronúncia" : "👁️ Ver pronúncia (aproximada)"}</button>
       ${showPhonetic ? `<p class="mono" style="color:var(--muted);font-size:13px;margin:-8px 0 16px">${item.fon || "Este item ainda não tem guia fonético escrito à mão. Usa o botão 🔊 Ouvir abaixo — a pronúncia gravada é mais fiável do que qualquer aproximação escrita."}</p>` : ""}
@@ -2193,7 +2231,8 @@ function renderWrite() {
       <div class="card">
         <p class="card-label mono">pensar a pergunta ${writeQIdx + 1} de ${qaItems.length}</p>
         ${modeBar(qaItems.length)}
-        <p class="sentence display">${qa.answer}</p>
+        <div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnWriteOuvirPrompt">🔊 Ouvir</button></div>
+        <p class="sentence display">${wordTapHtml(qa.answer)}</p>
         <p class="translation" style="margin-bottom:16px">${qa.ptAnswer}</p>
         <p class="note" style="margin-bottom:16px">Escreve, de memória, a PERGUNTA em norueguês que levaria a esta resposta.</p>
         <div class="canvas-wrap"><canvas id="writeCanvas"></canvas></div>
@@ -2203,7 +2242,7 @@ function renderWrite() {
         </div>
         ${writeRevealed ? `
           <div class="gloss-block" style="margin-top:12px">
-            <p class="sentence display" style="font-size:18px">${qa.question}</p>
+            <p class="sentence display" style="font-size:18px">${wordTapHtml(qa.question)}</p>
             <p class="translation">${qa.ptQuestion}</p>
             <button class="btn listen" id="btnWriteOuvir" style="margin-top:8px">🔊 Ouvir</button>
           </div>` : ""}
@@ -2231,7 +2270,7 @@ function renderWrite() {
         </div>
         ${writeRevealed ? `
           <div class="gloss-block" style="margin-top:12px">
-            <p class="sentence display" style="font-size:18px">${target}</p>
+            <p class="sentence display" style="font-size:18px">${wordTapHtml(target)}</p>
             <button class="btn listen" id="btnWriteOuvir" style="margin-top:8px">🔊 Ouvir</button>
           </div>` : ""}
         <button class="btn next" id="btnWriteNext" style="margin-top:16px">Próxima frase →</button>
@@ -2248,7 +2287,7 @@ function renderWrite() {
     <div class="card">
       <p class="card-label mono">copiar ${writeIdx + 1} de ${p.length}</p>
       ${modeBar(p.filter(splitQA).length)}
-      <p class="sentence display">${target}</p>
+      <p class="sentence display">${wordTapHtml(target)}</p>
       <p class="translation" style="margin-bottom:16px">${item.pt}</p>
       <div class="btn-row" style="margin-bottom:16px">
         <button class="btn listen" id="btnWriteOuvir">🔊 Ouvir</button>
@@ -2382,7 +2421,8 @@ function renderExercises() {
         <div class="session-bar"><div class="session-bar-fill" style="width:${pct}%"></div></div>
         <span class="mono" style="font-size:15px">${"❤️".repeat(lives)}${"🖤".repeat(5 - lives)}</span>
       </div>
-      <p class="sentence display">${item.blank}</p>
+      <div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnLessonListen">🔊 Ouvir</button></div>
+      <p class="sentence display">${wordTapHtml(item.blank)}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
       ${selected ? `<div style="height:100px"></div>` : ""}
@@ -2546,7 +2586,7 @@ function renderExercises() {
       </div>
       ${modeBar}
       <div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnExListenChoice">🔊 Ouvir</button></div>
-      <p class="sentence display">${item.blank}</p>
+      <p class="sentence display">${wordTapHtml(item.blank)}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
       ${exSelected ? `<div class="gloss-block">
@@ -2611,7 +2651,8 @@ function renderTest() {
   return `
     <div class="card">
       <p class="card-label mono">pergunta ${testState.idx + 1} de ${testState.set.length}</p>
-      <p class="sentence display">${item.blank}</p>
+      <div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnTestListen">🔊 Ouvir</button></div>
+      <p class="sentence display">${wordTapHtml(item.blank)}</p>
       <p class="translation">${item.pt}</p>
       <div class="options">${optsHtml}</div>
       ${testState.selected ? `<div class="gloss-block">${testState.currentOptions.map(o => `<p class="gloss-line"><b>${o}</b> — ${glossFor(o) || "significado não disponível"}</p>`).join("")}</div>` : ""}
@@ -2728,6 +2769,14 @@ function attachHandlers() {
     const btnWriteReveal = document.getElementById("btnWriteReveal");
     if (btnWriteReveal) btnWriteReveal.onclick = () => { writeRevealed = !writeRevealed; render(); };
 
+    const btnWriteOuvirPrompt = document.getElementById("btnWriteOuvirPrompt");
+    if (btnWriteOuvirPrompt) btnWriteOuvirPrompt.onclick = () => {
+      const p = pool();
+      const qaItems = p.map(splitQA).filter(Boolean);
+      if (!qaItems.length) return;
+      const qa = qaItems[writeQIdx % qaItems.length];
+      speak(qa.answer, () => {});
+    };
     const btnWriteOuvir = document.getElementById("btnWriteOuvir");
     if (btnWriteOuvir) btnWriteOuvir.onclick = () => {
       const p = pool();
@@ -2821,6 +2870,11 @@ function attachHandlers() {
       };
       const btnLessonRestart = document.getElementById("btnLessonRestart");
       if (btnLessonRestart) btnLessonRestart.onclick = () => { setupLesson(theme); render(); };
+      const btnLessonListen = document.getElementById("btnLessonListen");
+      if (btnLessonListen) btnLessonListen.onclick = () => {
+        const item = lessonState.queue[lessonState.idx];
+        if (item) speak(fullSentence(item), () => {});
+      };
     }
 
     if (exMode === "build" || exMode === "listen" || exMode === "listenTranslate") {
@@ -3025,6 +3079,11 @@ function attachHandlers() {
     if (btnTestNext) btnTestNext.onclick = () => {
       if (testState.idx + 1 < testState.set.length) { testState.idx++; testState.selected = null; testState.currentOptions = null; render(); }
       else finishTest();
+    };
+    const btnTestListen = document.getElementById("btnTestListen");
+    if (btnTestListen) btnTestListen.onclick = () => {
+      const item = testState.set[testState.idx];
+      if (item) speak(fullSentence(item), () => {});
     };
   }
   if (currentTab === "stats") {
@@ -3652,6 +3711,15 @@ document.querySelectorAll("#mainTabs .tab-btn").forEach(btn => {
     currentTab = btn.dataset.tab;
     render();
   };
+});
+
+// Toca em qualquer palavra norueguesa (.tap-word), em qualquer ecrã, a
+// qualquer momento — ligado uma única vez ao document, por isso continua a
+// funcionar depois de cada render() sem precisar de ser religado.
+document.addEventListener("click", (e) => {
+  const el = e.target.closest(".tap-word");
+  if (!el) return;
+  showWordToast(el.dataset.word);
 });
 
 render();
