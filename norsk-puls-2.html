@@ -482,6 +482,7 @@ const THEMES = [
   { id: "trabalho", label: "🔧 Trabalho" },
   { id: "apresentacao", label: "🙋 Apresentação" },
   { id: "quotidiano", label: "🗓️ Quotidiano" },
+  { id: "verbtider", label: "⏳ Verbtider" },
   { id: "viagem", label: "✈️ Viagem" },
   { id: "conversacao", label: "💬 Conversação" },
   { id: "geral", label: "✨ Geral" },
@@ -529,6 +530,16 @@ function initListen(item) {
 function initListenTranslate(item) {
   initBuildFor(item, item.pt, (o) => o.pt || "");
   buildLastKey = "listenTranslate:" + item.id;
+}
+
+// ---------- Modo: "❤️ Lição" (sessão curta com vidas) ----------
+function setupLesson(theme) {
+  const p = groupPool(theme);
+  const size = Math.min(10, p.length);
+  lessonState = {
+    theme, queue: shuffle(p.slice()).slice(0, size),
+    idx: 0, lives: 5, selected: null, options: null, gained: 0, failed: false,
+  };
 }
 
 // ---------- Modo: emparelhar pares ----------
@@ -653,6 +664,7 @@ const PROFESSIONS = [
   { no: "sjåfør", pt: "motorista" }, { no: "renholder", pt: "empregado de limpeza" },
   { no: "butikkmedarbeider", pt: "empregado de loja" }, { no: "lagermedarbeider", pt: "trabalhador de armazém" },
   { no: "maler", pt: "pintor" }, { no: "rørlegger", pt: "canalizador" },
+  { no: "blikkenslager", pt: "funileiro / canalizador de chapa" },
 ];
 const MONTHS_NUM = [
   { no: "tre", pt: "três" }, { no: "fire", pt: "quatro" }, { no: "fem", pt: "cinco" },
@@ -674,6 +686,10 @@ const OBJETOS = [
   { no: "stol", pt: "uma cadeira" }, { no: "lampe", pt: "um candeeiro" }, { no: "nøkkel", pt: "uma chave" },
   { no: "veske", pt: "uma mala" }, { no: "klokke", pt: "um relógio" }, { no: "kopp", pt: "uma chávena" },
   { no: "paraply", pt: "um guarda-chuva" },
+  { no: "eske", pt: "uma caixa" }, { no: "kniv", pt: "uma faca" }, { no: "gaffel", pt: "um garfo" },
+  { no: "skje", pt: "uma colher" }, { no: "blyant", pt: "um lápis" }, { no: "papir", pt: "um papel" },
+  { no: "bord", pt: "uma mesa" }, { no: "dør", pt: "uma porta" }, { no: "vindu", pt: "uma janela" },
+  { no: "telefon", pt: "um telefone" }, { no: "datamaskin", pt: "um computador" },
 ];
 const VEICULOS_DEF = [
   { no: "toget", pt: "o comboio" }, { no: "bussen", pt: "o autocarro" }, { no: "bilen", pt: "o carro" },
@@ -766,6 +782,86 @@ GENERATED = GENERATED.concat(genMulti("quotidiano", [
   { no: "Jeg spiste {} i går.", pt: "Comi {} ontem." },
   { no: "Jeg skal spise {} snart.", pt: "Vou comer {} em breve." },
 ], FOODS, "no", "pt", "food"));
+
+// ---- Advérbios de tempo/frequência (com inversão V2 quando o advérbio
+// vem no início da frase, como pediste) ----
+const ADVERBIOS_TEMPO = [
+  { no: "alltid", pt: "sempre" }, { no: "aldri", pt: "nunca" }, { no: "ofte", pt: "frequentemente" },
+  { no: "sjelden", pt: "raramente" }, { no: "snart", pt: "em breve" }, { no: "nå", pt: "agora" },
+  { no: "tidlig", pt: "cedo" }, { no: "sent", pt: "tarde" }, { no: "iblant", pt: "às vezes" },
+];
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "Jeg drikker ___ kaffe om morgenen.", pt: "Bebo café {} de manhã." },
+], ADVERBIOS_TEMPO, "no", "pt", "adverb_time"));
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "___ drikker jeg kaffe.", pt: "{}, bebo café." },
+], ADVERBIOS_TEMPO, "no", "pt", "adverb_time"));
+
+// ---- Advérbios de lugar (estático) — "hjem" fica de fora porque é a
+// forma de MOVIMENTO ("para casa"), gramaticalmente diferente de "hjemme"
+// ("em casa"); tem a sua própria frase fixa mais abaixo. ----
+const ADVERBIOS_LUGAR = [
+  { no: "hjemme", pt: "em casa" }, { no: "ute", pt: "fora / na rua" }, { no: "inne", pt: "dentro" },
+  { no: "oppe", pt: "em cima" }, { no: "nede", pt: "em baixo" }, { no: "borte", pt: "ausente / longe" },
+  { no: "framme", pt: "à frente / chegado" },
+];
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "Jeg er ___ i dag.", pt: "Estou {} hoje." },
+  { no: "Er du ___ i dag?", pt: "Estás {} hoje?" },
+], ADVERBIOS_LUGAR, "no", "pt", "adverb_place"));
+
+// ---- Adjetivos: uns descrevem pessoas, outros descrevem coisas — moldes
+// diferentes para cada grupo, para a frase ficar natural. ----
+const ADJETIVOS_PESSOA = [
+  { no: "syk", pt: "doente" }, { no: "frisk", pt: "saudável" }, { no: "trist", pt: "triste" },
+  { no: "sur", pt: "zangado" }, { no: "gammel", pt: "velho" }, { no: "ung", pt: "jovem" },
+  { no: "pen", pt: "bonito" }, { no: "stygg", pt: "feio" }, { no: "tykk", pt: "gordo" },
+  { no: "tynn", pt: "magro" }, { no: "lav", pt: "baixo" }, { no: "høy", pt: "alto" },
+];
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "Jeg er ___.", pt: "Eu sou/estou {}." },
+  { no: "Er du ___?", pt: "És/Estás {}?" },
+], ADJETIVOS_PESSOA, "no", "pt", "adjective_person"));
+
+const ADJETIVOS_COISA = [
+  { no: "vanskelig", pt: "difícil" }, { no: "lett", pt: "fácil" }, { no: "dyr", pt: "caro" },
+  { no: "billig", pt: "barato" }, { no: "morsom", pt: "divertido" }, { no: "kjedelig", pt: "chato" },
+];
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "Det er ___.", pt: "Isso é {}." },
+  { no: "Er det ___?", pt: "Isso é {}?" },
+], ADJETIVOS_COISA, "no", "pt", "adjective_thing"));
+
+// ---- Pessoas (além da família, que já tem tema próprio) ----
+const PESSOAS = [
+  { no: "en mann", pt: "um homem" }, { no: "en gutt", pt: "um rapaz" },
+  { no: "ei jente", pt: "uma rapariga" }, { no: "ei kvinne", pt: "uma mulher" },
+];
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "Det er ___ der.", pt: "Ali está {}." },
+], PESSOAS, "no", "pt", "person"));
+
+// ---- Lugares gerais (aeroporto, parque, biblioteca...) ----
+const LUGARES_GERAIS = [
+  { no: "flyplassen", pt: "o aeroporto" }, { no: "parken", pt: "o parque" },
+  { no: "stasjonen", pt: "a estação" }, { no: "markedet", pt: "o mercado" },
+  { no: "biblioteket", pt: "a biblioteca" },
+];
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "Jeg skal til ___.", pt: "Vou para {}." },
+  { no: "Skal du til ___?", pt: "Vais para {}?" },
+], LUGARES_GERAIS, "no", "pt", "place_general"));
+
+// ---- Verbos do dia a dia que ainda não tinham exercício próprio ----
+const VERBOS_MANHA = [{ no: "våkne", pt: "acordar" }, { no: "stå opp", pt: "levantar-me" }];
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "Jeg må ___ tidlig i morgen.", pt: "Tenho de {} cedo amanhã." },
+], VERBOS_MANHA, "no", "pt", "verb_morning"));
+
+const VERBOS_ESTUDO = [{ no: "lære", pt: "aprender" }, { no: "studere", pt: "estudar" }];
+GENERATED = GENERATED.concat(genMulti("quotidiano", [
+  { no: "Jeg vil ___ norsk.", pt: "Eu quero {} norueguês." },
+], VERBOS_ESTUDO, "no", "pt", "verb_study"));
 
 GENERATED = GENERATED.concat(genMulti("trabalho", [
   { no: "Jeg er {}.", pt: "Eu sou {}." },
@@ -1059,6 +1155,22 @@ const CURATED_EXTRA = [
   { theme: "industri", blank: "___ av maskinene skjer hver måned.", answer: "Vedlikehold", pt: "A manutenção das máquinas acontece todos os meses." },
   { theme: "industri", blank: "Produksjonslinjen stoppet på grunn av en teknisk ___.", answer: "feil", pt: "A linha de produção parou por causa de uma falha técnica." },
   { theme: "industri", blank: "Bruk alltid ___ når du løfter tunge ting.", answer: "arbeidshansker", pt: "Usa sempre luvas de trabalho quando levantas coisas pesadas." },
+
+  // ---- Verbtider: presens (hoje) vs. preteritum (ontem/antes) ----
+  { theme: "verbtider", blank: "I dag spiser jeg fisk. I går ___ jeg fisk også.", answer: "spiste", pt: "Hoje como peixe. Ontem também comi peixe." },
+  { theme: "verbtider", blank: "Nå bor jeg i Oslo. Før ___ jeg i Bergen.", answer: "bodde", pt: "Agora moro em Oslo. Antes morava em Bergen." },
+  { theme: "verbtider", blank: "I dag går jeg til jobb. I går ___ jeg til jobb også.", answer: "gikk", pt: "Hoje vou a pé para o trabalho. Ontem também fui a pé." },
+  { theme: "verbtider", blank: "Nå har jeg bil. Før ___ jeg sykkel.", answer: "hadde", pt: "Agora tenho carro. Antes tinha bicicleta." },
+  { theme: "verbtider", blank: "I dag er jeg glad. I går ___ jeg trist.", answer: "var", pt: "Hoje estou feliz. Ontem estava triste." },
+  { theme: "verbtider", blank: "Jeg snakker norsk nå. For et år siden ___ jeg ikke norsk.", answer: "snakket", pt: "Agora falo norueguês. Há um ano não falava norueguês." },
+  { theme: "verbtider", blank: "Han jobber som elektriker nå. Før ___ han som snekker.", answer: "jobbet", pt: "Ele trabalha como eletricista agora. Antes trabalhava como carpinteiro." },
+
+  // ---- Contradição com "jo" — resposta afirmativa a uma pergunta negativa ----
+  { theme: "conversacao", blank: "Snakker du ikke norsk? — ___, det gjør jeg!", answer: "Jo", pt: "Não falas norueguês? — Sim [pelo contrário], falo!" },
+  { theme: "conversacao", blank: "Har du ikke bil? — ___, jeg har det!", answer: "Jo", pt: "Não tens carro? — Sim [pelo contrário], tenho!" },
+  { theme: "conversacao", blank: "Liker du kaffe? — ___, det gjør jeg ikke.", answer: "Nei", pt: "Gostas de café? — Não, não gosto." },
+  { theme: "conversacao", blank: "Jeg ___ te, men jeg liker ikke kaffe.", answer: "elsker", pt: "Eu adoro chá, mas não gosto de café." },
+  { theme: "quotidiano", blank: "Klokka er mange, jeg skal ___ nå.", answer: "hjem", pt: "Já é tarde, vou para casa agora." },
 ];
 const EXTRA_ITEMS = GENERATED.concat(
   CURATED_EXTRA.map((it, i) => ({ id: "cur-" + i, level: 1, ...it }))
@@ -1205,6 +1317,11 @@ const GLOSS = {
   kommer: "vem", flytte: "mudar-se", tom: "vazio", fylle: "encher", beholdere: "recipientes",
   plastpose: "saco de plástico", unntak: "exceções", vannflasken: "a garrafa de água",
   nær: "perto de", "langt fra": "longe de", "midt i": "no meio de",
+  der: "ali / lá", feil: "erro / incorreto",
+  dyktig: "competente / habilidoso", blikkenslager: "funileiro / canalizador de chapa",
+  søkes: "procura-se", bli: "tornar-se / ser", viktig: "importante", del: "parte",
+  vår: "nosso / nossa", neste: "próximo", heteste: "mais popular / em voga",
+  mulighet: "oportunidade / possibilidade", fulltid: "tempo inteiro / horário completo",
 };
 
 // Junta ao glossário a tradução de cada palavra que já vem definida nos
@@ -1234,6 +1351,14 @@ const GLOSS = {
   { bank: DRIKKE, field: "pt" },
   { bank: FAMILIA, field: "pt" },
   { bank: TIPO_HABITACAO, field: "pt" },
+  { bank: ADVERBIOS_TEMPO, field: "pt" },
+  { bank: ADVERBIOS_LUGAR, field: "pt" },
+  { bank: ADJETIVOS_PESSOA, field: "pt" },
+  { bank: ADJETIVOS_COISA, field: "pt" },
+  { bank: PESSOAS, field: "pt" },
+  { bank: LUGARES_GERAIS, field: "pt" },
+  { bank: VERBOS_MANHA, field: "pt" },
+  { bank: VERBOS_ESTUDO, field: "pt" },
 ].forEach(({ bank, field }) => {
   bank.forEach(w => {
     const key = w.no.toLowerCase();
@@ -1290,15 +1415,22 @@ tagCategory(["forberedt", "sulten", "tørst", "trøtt", "glad", "ny", "gammel", 
 tagCategory(["flytter", "øver", "bor", "jobber", "snakker", "heter", "kommer", "spiser", "sover", "kjører", "leser",
   "søker", "liker", "lager", "selger", "sier", "vet", "fylle", "betale", "bestille", "kjøpe", "spise", "lage",
   "se", "høre", "snakke", "vite", "møte", "hilser", "smiler", "vinker", "hilste", "smilte", "vinket", "bodde",
-  "jobbet", "reiser", "reiste", "husket", "snakket", "spiste", "dør", "kan", "vil", "skal", "må", "har", "er"], "verb");
+  "jobbet", "reiser", "reiste", "husket", "snakket", "spiste", "dør", "kan", "vil", "skal", "må", "har", "er",
+  "gikk", "hadde", "var", "søkes", "bli", "elsker", "misliker", "hater", "gjøre", "fortelle", "hjelpe", "våkne",
+  "lære", "studere"], "verb");
 tagCategory(["med", "om", "fra", "til", "i", "på", "av", "nær", "langt fra", "midt i"], "preposition");
+tagCategory(["ja", "nei", "jo", "kanskje", "men", "ikke", "bare"], "particle");
+tagCategory(["vår"], "possessive");
+tagCategory(["dyktig", "viktig", "neste", "heteste"], "adjective");
+tagCategory(["hjem"], "adverb_place");
+GLOSS["hjem"] = GLOSS["hjem"] || "para casa (movimento)";
 // Substantivos das frases fixas de bolig/jobbsøking/indústria (finn.no) —
 // não passam pelo gerador de moldes, por isso também não tinham categoria.
 tagCategory(["Fellesutgifter", "Innboforsikring", "Kontrakten", "Stillingsannonsen", "Søknadsbrevet", "Trucken",
   "Utleier", "Vedlikehold", "arbeidserfaring", "arbeidshansker", "beholdere", "bok", "feil", "heltid", "hjelm",
   "intervju", "jobb", "kvalifikasjoner", "materialer", "nattskift", "plastpose", "referanser", "sikkerhet",
   "sveising", "søknad", "søknadsfristen", "toget", "verneutstyr", "vikariat", "visning", "vannflasken", "Unntak",
-  "depositum", "husleie", "kontrakt"], "misc_noun");
+  "depositum", "husleie", "kontrakt", "del", "mulighet", "fulltid"], "misc_noun");
 function categoryOf(word) { return WORD_CATEGORY[word.toLowerCase()] || null; }
 
 // ---------- Matching helpers ----------
@@ -1656,6 +1788,10 @@ let exMode = "choice"; // "choice", "build" (construir), "listen" (ditado), "lis
 let buildBank = [], buildAnswer = [], buildChecked = false, buildLastKey = null;
 let buildWrong = false, buildGaveUp = false;
 let matchState = { theme: null, pairs: [], leftOrder: null, rightOrder: null, selLeft: null, selRight: null, matched: [], wrong: null };
+// ---- Estado da "❤️ Lição" — sessão curta com vidas, ao estilo Duolingo:
+// erras uma pergunta e ela volta a aparecer mais à frente na mesma sessão,
+// em vez de simplesmente avançar; ficas sem vidas e a lição falha.
+let lessonState = { theme: null, queue: [], idx: 0, lives: 5, selected: null, options: null, gained: 0, failed: false };
 let listening = false, heard = "", result = null, micError = "", showPhonetic = false;
 let recInstance = null;
 let exSelected = null;
@@ -2194,8 +2330,78 @@ function renderExercises() {
       <button class="tab-btn ${exMode === "listen" ? "active" : ""}" id="btnExModeListen">🎧 Ditado</button>
       <button class="tab-btn ${exMode === "listenTranslate" ? "active" : ""}" id="btnExModeListenTranslate">🌍 Ouvir e traduzir</button>
       <button class="tab-btn ${exMode === "match" ? "active" : ""}" id="btnExModeMatch">🔗 Emparelhar</button>
+      <button class="tab-btn ${exMode === "lesson" ? "active" : ""}" id="btnExModeLesson">❤️ Lição</button>
     </div>
     ${groupNoteHtml(theme)}`;
+
+  if (exMode === "lesson") {
+    if (lessonState.theme !== theme) setupLesson(theme);
+    const { queue, idx, lives, selected, gained, failed } = lessonState;
+    if (!queue.length) {
+      return `${banner}<div class="card">${modeBar}<p class="translation">Este tema ainda não tem frases suficientes para uma lição.</p></div>`;
+    }
+    if (failed) {
+      return `
+        ${banner}
+        <div class="card center-card">
+          ${modeBar}
+          <p style="font-size:40px;margin-bottom:8px">💔</p>
+          <p class="sentence display" style="font-size:18px">Ficaste sem vidas!</p>
+          <p class="translation" style="margin-bottom:20px">Sem problema — tenta outra vez, sem pressa.</p>
+          <button class="btn next" id="btnLessonRestart" style="margin:0 auto">↺ Recomeçar lição</button>
+        </div>`;
+    }
+    if (idx >= queue.length) {
+      return `
+        ${banner}
+        <div class="card center-card">
+          ${modeBar}
+          <p style="font-size:40px;margin-bottom:8px">🎉</p>
+          <p class="sentence display" style="font-size:18px">Lição concluída!</p>
+          <p class="translation" style="margin-bottom:20px">Ganhaste ${gained} ponto${gained === 1 ? "" : "s"} nesta lição, com ${lives} vida${lives === 1 ? "" : "s"} restante${lives === 1 ? "" : "s"}.</p>
+          <button class="btn next" id="btnLessonRestart" style="margin:0 auto">↺ Nova lição</button>
+        </div>`;
+    }
+    const item = queue[idx];
+    if (!lessonState.options || lessonState.options._for !== item.id + ":" + idx) {
+      lessonState.options = { list: optionsFor(item), _for: item.id + ":" + idx };
+    }
+    const pct = Math.round((idx / queue.length) * 100);
+    const optsHtml = lessonState.options.list.map(opt => {
+      const isCorrect = opt === item.answer;
+      let cls = "opt-btn";
+      if (selected) {
+        if (isCorrect) cls += " correct";
+        else if (opt === selected) cls += " wrong";
+        else cls += " dim";
+      }
+      return `<button class="${cls}" data-opt="${opt}" ${selected ? "disabled" : ""}>${opt}</button>`;
+    }).join("");
+    const bodyHtml = `
+      <div class="session-bar-row">
+        <div class="session-bar"><div class="session-bar-fill" style="width:${pct}%"></div></div>
+        <span class="mono" style="font-size:15px">${"❤️".repeat(lives)}${"🖤".repeat(5 - lives)}</span>
+      </div>
+      <p class="sentence display">${item.blank}</p>
+      <p class="translation">${item.pt}</p>
+      <div class="options">${optsHtml}</div>
+      ${selected ? `<div style="height:100px"></div>` : ""}
+    `;
+    return `
+      ${banner}
+      <div class="card">
+        ${modeBar}
+        ${bodyHtml}
+      </div>
+      ${selected ? feedbackSheetHtml({
+        correct: selected === item.answer,
+        title: selected === item.answer ? "Muito bem!" : "❤️ perdeste uma vida",
+        detail: selected === item.answer ? "" : `A resposta certa era: <b>${item.answer}</b> — esta pergunta volta a aparecer mais à frente.`,
+        btnId: "btnLessonNext",
+        btnLabel: "CONTINUAR",
+      }) : ""}
+    `;
+  }
 
   if (exMode === "match") {
     if (matchState.theme !== theme) setupMatch(theme);
@@ -2580,6 +2786,42 @@ function attachHandlers() {
     if (btnExModeListenTranslate) btnExModeListenTranslate.onclick = () => setExMode("listenTranslate");
     const btnExModeMatch = document.getElementById("btnExModeMatch");
     if (btnExModeMatch) btnExModeMatch.onclick = () => setExMode("match");
+    const btnExModeLesson = document.getElementById("btnExModeLesson");
+    if (btnExModeLesson) btnExModeLesson.onclick = () => setExMode("lesson");
+
+    if (exMode === "lesson") {
+      document.querySelectorAll(".options .opt-btn").forEach(b => {
+        b.onclick = () => {
+          if (lessonState.selected) return;
+          lessonState.selected = b.dataset.opt;
+          const item = lessonState.queue[lessonState.idx];
+          touchStreak();
+          if (lessonState.selected === item.answer) {
+            addPoint();
+            lessonState.gained++;
+          } else {
+            lessonState.lives--;
+            // A pergunta errada volta a aparecer mais à frente na mesma
+            // lição — só passa quando acertares, ao estilo Duolingo.
+            lessonState.queue.push(item);
+          }
+          render();
+        };
+      });
+      const btnLessonNext = document.getElementById("btnLessonNext");
+      if (btnLessonNext) btnLessonNext.onclick = () => {
+        if (lessonState.lives <= 0) {
+          lessonState.failed = true;
+        } else {
+          lessonState.idx++;
+        }
+        lessonState.selected = null;
+        lessonState.options = null;
+        render();
+      };
+      const btnLessonRestart = document.getElementById("btnLessonRestart");
+      if (btnLessonRestart) btnLessonRestart.onclick = () => { setupLesson(theme); render(); };
+    }
 
     if (exMode === "build" || exMode === "listen" || exMode === "listenTranslate") {
       const btnExListenTop = document.getElementById("btnExListenTop");
@@ -2694,7 +2936,7 @@ function attachHandlers() {
       });
       const btnMatchNext = document.getElementById("btnMatchNext");
       if (btnMatchNext) btnMatchNext.onclick = () => { setupMatch(theme); render(); };
-    } else {
+    } else if (exMode === "choice") {
       document.querySelectorAll(".options .opt-btn").forEach(b => {
         b.onclick = () => {
           if (exSelected) return;
