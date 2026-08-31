@@ -585,7 +585,7 @@ function initListenTranslate(item) {
 function setupLesson(theme) {
   const p = groupPool(theme);
   const itemsMap = new Map(p.map(i => [i.id, i]));
-  const orderedIds = interleaveByTemplate(p.map(i => i.id), itemsMap);
+  const orderedIds = buildProgressiveOrder(p.map(i => i.id), itemsMap);
   const size = Math.min(10, orderedIds.length);
   lessonState = {
     theme, queue: orderedIds.slice(0, size).map(id => itemsMap.get(id)),
@@ -2244,6 +2244,33 @@ function interleaveByTemplate(ids, itemsMap) {
   }
   return result;
 }
+
+// ---------- Curva de dificuldade gradual (Ponto 1) ----------
+// Mesma métrica já usada nos rótulos 🟢🟡🔴 (número de palavras da frase),
+// agora também para ORDENAR os exercícios de cada tema em 3 passos:
+// Passo A = frases muito curtas (praticamente vocabulário isolado),
+// Passo B = frases curtas (3-6 palavras), Passo C = frases mais longas e
+// de contexto real. Como o progresso oficial (o cursor) só avança quando
+// se acerta — já era assim antes desta alteração —, isto sozinho garante
+// que só se chega ao Passo C depois de ter respondido certo a tudo o
+// Passo A e o Passo B: não é preciso nenhum bloqueio extra, só a ordem.
+function itemPhase(item) {
+  const wc = fullSentence(item).split(" ").filter(Boolean).length;
+  if (wc <= 3) return "A";
+  if (wc <= 6) return "B";
+  return "C";
+}
+function buildProgressiveOrder(ids, itemsMap) {
+  const phases = { A: [], B: [], C: [] };
+  ids.forEach(id => {
+    const item = itemsMap.get(id);
+    phases[item ? itemPhase(item) : "C"].push(id);
+  });
+  return interleaveByTemplate(phases.A, itemsMap)
+    .concat(interleaveByTemplate(phases.B, itemsMap))
+    .concat(interleaveByTemplate(phases.C, itemsMap));
+}
+
 function getOrderIds(mode, theme) {
   const themeIds = mode === "ex" ? themeGroupIds(theme) : [theme];
   const groupTheme = mode === "ex" ? themeGroupKey(theme) : theme;
@@ -2253,13 +2280,13 @@ function getOrderIds(mode, theme) {
   const idSet = new Set(ids);
   let order = loadJSON(orderKey(mode, groupTheme), null);
   if (!order) {
-    order = interleaveByTemplate(ids, itemsMap);
+    order = buildProgressiveOrder(ids, itemsMap);
     saveJSON(orderKey(mode, groupTheme), order);
     return order;
   }
   let filtered = order.filter(id => idSet.has(id));
   const missing = ids.filter(id => !filtered.includes(id));
-  if (missing.length) filtered = filtered.concat(interleaveByTemplate(missing, itemsMap));
+  if (missing.length) filtered = filtered.concat(buildProgressiveOrder(missing, itemsMap));
   if (filtered.length !== order.length) saveJSON(orderKey(mode, groupTheme), filtered);
   return filtered;
 }
