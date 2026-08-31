@@ -96,6 +96,7 @@
     color: var(--text);
     border-color: var(--border2);
   }
+  .tab-btn.locked { opacity: 0.45; }
 
   .card {
     background: var(--surface);
@@ -105,8 +106,8 @@
   }
   .card-label { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
   .sentence { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
-  .tap-word { cursor: pointer; border-bottom: 1px dotted var(--muted2); border-radius: 3px; }
-  .tap-word:active { color: var(--violet); background: rgba(139,127,232,0.12); }
+  .tap-word, .tap-word-piece { cursor: pointer; border-bottom: 1px dotted var(--muted2); border-radius: 3px; }
+  .tap-word:active, .tap-word-piece:active { color: var(--violet); background: rgba(139,127,232,0.12); }
   .tap-word-holding { color: var(--green); background: rgba(74,222,140,0.18); }
   #wordToast {
     position: fixed; top: 70px; left: 50%; transform: translate(-50%, -8px);
@@ -162,15 +163,23 @@
     100% { box-shadow: 0 0 0 0 rgba(74,222,140,0), 0 0 0 0 rgba(139,127,232,0); }
   }
 
-  .canvas-wrap {
-    border: 1px solid var(--border2);
+  .write-input {
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    padding: 14px;
     border-radius: 12px;
-    overflow: hidden;
-    touch-action: none;
+    border: 1px solid var(--border2);
     background: #0e1626;
+    color: var(--text);
+    resize: vertical;
+    min-height: 70px;
     margin: 4px 0 16px;
   }
-  .canvas-wrap canvas { display: block; width: 100%; height: 220px; }
+  .write-input:focus { outline: none; border-color: var(--violet); }
+  .write-input.correct { border-color: var(--green); }
+  .write-input.warn { border-color: var(--amber); }
+  .write-input.wrong { border-color: var(--red); }
 
   .gloss-block {
     margin-top: 16px;
@@ -575,9 +584,11 @@ function initListenTranslate(item) {
 // ---------- Modo: "❤️ Lição" (sessão curta com vidas) ----------
 function setupLesson(theme) {
   const p = groupPool(theme);
-  const size = Math.min(10, p.length);
+  const itemsMap = new Map(p.map(i => [i.id, i]));
+  const orderedIds = interleaveByTemplate(p.map(i => i.id), itemsMap);
+  const size = Math.min(10, orderedIds.length);
   lessonState = {
-    theme, queue: shuffle(p.slice()).slice(0, size),
+    theme, queue: orderedIds.slice(0, size).map(id => itemsMap.get(id)),
     idx: 0, lives: 5, selected: null, options: null, gained: 0, failed: false,
   };
 }
@@ -1362,6 +1373,77 @@ const GLOSS = {
   søkes: "procura-se", bli: "tornar-se / ser", viktig: "importante", del: "parte",
   vår: "nosso / nossa", neste: "próximo", heteste: "mais popular / em voga",
   mulighet: "oportunidade / possibilidade", fulltid: "tempo inteiro / horário completo",
+  denne: "este / esta", dette: "isto / isso", disse: "estes / estas",
+  den: "esse / essa (aquele)", det: "isso / aquilo", noe: "algo / alguma coisa",
+  alt: "tudo", alle: "todos", sjef: "chefe", filter: "filtro",
+  hvis: "se (condição)", eller: "ou", men: "mas", også: "também",
+  fordi: "porque", derfor: "por isso", igjen: "outra vez / de novo",
+  litt: "um pouco", mye: "muito (quantidade)", mange: "muitos",
+  // ---- Lote de auditoria: palavras funcionais, verbos no passado e
+  // substantivos que apareciam em frases reais sem tradução nenhuma ----
+  om: "sobre / em (tempo)", hver: "cada", å: "a / de (antes de um verbo no infinitivo)",
+  ikke: "não", så: "então / tão", ennå: "ainda", her: "aqui", år: "ano",
+  få: "poucos / conseguir", gjerne: "de bom grado / com todo o gosto",
+  bruke: "usar", sjekke: "verificar", flere: "vários / mais", begynner: "começa",
+  strøm: "eletricidade", før: "antes", sentrum: "o centro (da cidade)",
+  langt: "longe", midt: "no meio", blir: "torna-se / fica", ble: "tornou-se / ficou",
+  spiste: "comeu", drikker: "bebe", gutt: "rapaz", ei: "uma (feminino)",
+  jente: "rapariga", kvinne: "mulher", stå: "ficar de pé", opp: "para cima",
+  som: "como / que", søkte: "candidatou-se / procurou", fjor: "ano passado",
+  reiser: "viaja", reiste: "viajou", reise: "viajar", husket: "lembrou-se",
+  snakket: "falou", kunne: "podia / sabia", trenger: "precisa", kom: "veio",
+  leter: "procura", etter: "depois de / atrás de", husleie: "renda",
+  måned: "mês", måneder: "meses", måneden: "o mês", måneders: "de meses",
+  timer: "horas", kroner: "coroas (moeda)", kabler: "cabos", møtet: "a reunião",
+  klokka: "as horas / o relógio", var: "estava / era", hadde: "tinha",
+  erfaring: "experiência", stilling: "posição / emprego", stillingen: "a posição",
+  ledig: "disponível / livre / vago", god: "bom", hilste: "cumprimentou",
+  smilte: "sorriu", vinket: "acenou", ha: "ter", min: "meu / minha",
+  din: "teu / tua", savner: "sente falta de / tem saudades de", være: "ser / estar",
+  gjennom: "através de", etterpå: "depois / a seguir", maksimalt: "no máximo",
+  passe: "caber", gjelder: "aplica-se", for: "para / porque", og: "e",
+  babymat: "comida de bebé", medisiner: "medicamentos", tilsvarer: "corresponde",
+  vanligvis: "normalmente / costumo", husleien: "a renda", ansvar: "responsabilidade",
+  at: "que (conjunção)", boligen: "o imóvel / a casa", stand: "estado (condição)",
+  oppsigelse: "rescisão", minst: "pelo menos", forveien: "de antecedência",
+  kontrakten: "o contrato", bør: "deve / devia", beskrive: "descrever",
+  beskriver: "descreve", inkludert: "incluído",
+  annonseres: "é anunciado", møblert: "mobilado", delt: "partilhado",
+  bad: "casa de banho", fellesutgifter: "despesas comuns", dekker: "cobre",
+  blant: "entre", annet: "outro", vaktmester: "porteiro / zelador",
+  vedlikehold: "manutenção", be: "pedir", visning: "visita ao imóvel",
+  signerer: "assina", skader: "danos", dine: "teus / tuas", egne: "próprios",
+  eiendeler: "bens / pertences", send: "envia", kort: "curto / curta",
+  interessert: "interessado", oppgaver: "tarefas", oppfylle: "cumprir",
+  kvalifikasjoner: "requisitos / qualificações", søke: "candidatar-se",
+  sende: "enviar", vise: "mostrar", passer: "é adequado / serve",
+  arbeidsgiveren: "o empregador", spør: "pergunta", tidligere: "anterior",
+  gode: "boas", fredag: "sexta-feira", ønsker: "deseja / quer", jobbe: "trabalhar",
+  deltid: "meio período", ved: "junto a / durante",
+  varer: "mercadorias / dura", inn: "para dentro", ut: "para fora",
+  kranen: "o guindaste", løfter: "levanta", tunge: "pesadas", uken: "a semana",
+  hms: "saúde, ambiente e segurança", helse: "saúde", miljø: "ambiente",
+  personale: "pessoal (funcionários)", seg: "se (pronome reflexivo)",
+  maskinene: "as máquinas", skjer: "acontece", stoppet: "parou",
+  grunn: "razão / motivo", teknisk: "técnico", ting: "coisa", gikk: "foi / andou",
+  siden: "desde / atrás", gjør: "faz", pizza: "pizza", smaker: "sabe (tem sabor)",
+  fin: "bom / bonito", nesbø: "(nome próprio)",
+  hei: "olá", hyggelig: "agradável / prazer (em conhecer-te)", unnskyld: "desculpa",
+  husk: "lembra-te (imperativo)", skiftet: "o turno", bodde: "morava",
+  sikkerhetskontrollen: "o controlo de segurança", væsken: "o líquido",
+  ml: "ml (mililitros)", beholderne: "os recipientes", én: "um (forma enfática)",
+  depositum: "caução", utleier: "senhorio", leietaker: "inquilino",
+  varsle: "avisar", innboforsikring: "seguro de recheio", søknad: "candidatura",
+  bolig: "habitação / casa", stillingsannonsen: "a oferta de emprego",
+  hvilke: "quais", noen: "algum / alguns", søknaden: "a candidatura",
+  søknadsfristen: "o prazo de candidatura", søknadsbrevet: "a carta de candidatura",
+  arbeidserfaring: "experiência profissional", ta: "leva / toma (imperativo)",
+  referanser: "referências", intervjuet: "a entrevista", et: "um (neutro)",
+  intervju: "entrevista", vikariat: "substituição temporária", fast: "permanente / fixo",
+  heltid: "tempo inteiro", bruk: "usa (imperativo)", sveising: "soldadura",
+  trucken: "a empilhadora", materialer: "materiais", nattskift: "turno da noite",
+  står: "está de pé / significa", sikkerhet: "segurança",
+  produksjonshallen: "o pavilhão de produção", elsker: "ama / adora",
 };
 
 // Junta ao glossário a tradução de cada palavra que já vem definida nos
@@ -1411,8 +1493,39 @@ const GLOSS = {
 // inteira onde apareceu. Mostrar a frase toda como se fosse "o significado
 // desta palavra" era o bug: enganoso, e ao contrário do que a secção
 // promete ("significado literal de cada palavra").
+// O norueguês cola o artigo definido ("o/a") ao FIM da palavra em vez de
+// ser uma palavra à parte (ex.: filter=filtro → filteret=o filtro;
+// sjef=chefe → sjefen=o chefe). Sem isto, qualquer forma flexionada de uma
+// palavra que já está no glossário aparecia como "significado não
+// disponível", mesmo já sabendo a palavra base.
+const DEFINITE_SUFFIXES = ["ene", "en", "et", "a"];
+// Nomes próprios que aparecem nas frases (pessoas, autores) — nunca se
+// "traduzem", por isso mostram uma nota em vez de "significado não
+// disponível". Cidades e países já têm o seu próprio banco (CITIES/
+// COUNTRIES) e entram no glossário por esse caminho, não por aqui.
+const PROPER_NAMES = new Set(["david", "pedro", "nesbø", "jo"]);
 function glossFor(word) {
-  return GLOSS[word.toLowerCase()] || null;
+  const key = word.toLowerCase();
+  if (GLOSS[key]) return GLOSS[key];
+  if (/^\d[\d.,]*$/.test(word)) return "número";
+  if (PROPER_NAMES.has(key)) return "(nome próprio)";
+  for (const suf of DEFINITE_SUFFIXES) {
+    if (key.length > suf.length + 2 && key.endsWith(suf)) {
+      const base = key.slice(0, -suf.length);
+      if (GLOSS[base]) {
+        const plural = suf === "ene";
+        const artigo = plural ? "os/as " : "o/a ";
+        return `${artigo}${GLOSS[base]}${plural ? " (plural)" : ""}`;
+      }
+      // formas com consoante duplicada antes do sufixo (ex.: katt+en, não
+      // katten→katt+ten): tenta também sem a última consoante repetida.
+      if (base.length > 2 && base[base.length - 1] === base[base.length - 2]) {
+        const base2 = base.slice(0, -1);
+        if (GLOSS[base2]) return `${suf === "ene" ? "os/as " : "o/a "}${GLOSS[base2]}`;
+      }
+    }
+  }
+  return null;
 }
 
 // ---------- Categoria gramatical/semântica por palavra ----------
@@ -1635,6 +1748,52 @@ function groupNoteHtml(themeId) {
     return t ? t.label : id;
   });
   return `<p class="mono" style="font-size:11px;color:var(--muted2);margin:-8px 0 14px">🔀 vocabulário partilhado com ${labels.join(", ")} nesta secção</p>`;
+}
+
+// ---------- Caminho de níveis (Ponto 6) ----------
+// Ordem pedagógica sugerida: básico → cumprimentos/apresentação → vocabulário
+// do dia a dia → trabalho/habitação, no fim. Temas já agrupados (ver
+// THEME_GROUPS) ficam sempre no mesmo nível, porque já partilham o mesmo
+// progresso. Um nível só desbloqueia quando o anterior chega a 80% de
+// domínio — o "domínio" é a mesma percentagem que já se via em 📊 Progresso
+// e nos separadores de tema, não é um número novo inventado agora.
+const LEVEL_PATH = [
+  { label: "Nível 1: Básico", themes: ["basico", "quotidiano"] },
+  { label: "Nível 2: Cumprimentos", themes: ["cumprimentos", "apresentacao"] },
+  { label: "Nível 3: Números", themes: ["numeros"] },
+  { label: "Nível 4: Família", themes: ["familia"] },
+  { label: "Nível 5: Conversação", themes: ["conversacao"] },
+  { label: "Nível 6: Transporte", themes: ["transporte"] },
+  { label: "Nível 7: Restaurante", themes: ["restaurante"] },
+  { label: "Nível 8: Viagem", themes: ["viagem"] },
+  { label: "Nível 9: Geral", themes: ["geral"] },
+  { label: "Nível 10: Trabalho", themes: ["trabalho", "industri"] },
+  { label: "Nível 11: Habitação", themes: ["bolig"] },
+  { label: "Nível 12: Candidaturas", themes: ["jobbsoking"] },
+  { label: "Nível 13: Verbtider", themes: ["verbtider"] },
+];
+const LEVEL_UNLOCK_PCT = 80;
+function themeLevelIndex(themeId) {
+  return LEVEL_PATH.findIndex((l) => l.themes.includes(themeId));
+}
+// Mesma conta que já era feita nos separadores de tema e em 📊 Progresso:
+// quantos exercícios já respondeste certo pelo menos uma vez, sobre o total.
+function levelMasteryPct(levelIdx) {
+  const level = LEVEL_PATH[levelIdx];
+  if (!level) return 100;
+  const themeId = level.themes[0];
+  const order = resolveOrder("ex", themeId);
+  if (!order.length) return 0;
+  const cursor = Math.min(getCursor("ex", themeId, order.length), order.length);
+  return Math.round((cursor / order.length) * 100);
+}
+// Temas que a própria pessoa cria em ➕ Adicionar não entram no caminho de
+// níveis (themeLevelIndex devolve -1) — ficam sempre livres, faz sentido,
+// já que ela própria decidiu criá-los.
+function isThemeUnlocked(themeId) {
+  const idx = themeLevelIndex(themeId);
+  if (idx <= 0) return true;
+  return levelMasteryPct(idx - 1) >= LEVEL_UNLOCK_PCT;
 }
 
 function getThemes() {
@@ -1879,19 +2038,22 @@ function closeGrammarModal() {
 // religado a cada render().
 function wordTapHtml(text) {
   return String(text).split(" ").map(w => {
-    const clean = w.replace(/[.,!?;:]/g, "");
-    if (!clean) return w;
+    const clean = w.replace(/[.,!?;:—]/g, "");
+    if (!clean || !/[a-zA-ZæøåÆØÅ]/.test(clean)) return w; // pontuação isolada, travessão, etc. — nada a tocar
     return `<span class="tap-word" data-word="${clean.replace(/"/g, "&quot;")}">${w}</span>`;
   }).join(" ");
 }
-function showWordToast(word) {
+function showToast(message) {
   const toast = document.getElementById("wordToast");
   if (!toast) return;
-  const g = glossFor(word);
-  toast.textContent = g ? `${word} — ${g}` : `${word} — significado não disponível`;
+  toast.textContent = message;
   toast.classList.add("show");
-  clearTimeout(showWordToast._t);
-  showWordToast._t = setTimeout(() => toast.classList.remove("show"), 2600);
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove("show"), 2600);
+}
+function showWordToast(word) {
+  const g = glossFor(word);
+  showToast(g ? `${word} — ${g}` : `${word} — significado não disponível`);
 }
 
 function speak(text, onError) {
@@ -1929,7 +2091,8 @@ function getRecognition() {
 let currentTab = "news";
 let currentTheme = "basico";
 let practiceIdx = loadPracticeIdx("basico"), exerciseOptions = null, writeIdx = 0, writeQIdx = 0;
-let writeMode = "recall", writeRevealed = false;
+let writeMode = "recall";
+let writeInput = "", writeChecked = false, writeResult = null;
 let exMode = "choice"; // "choice", "build" (construir), "listen" (ditado), "listenTranslate" (ouvir e traduzir) ou "match" (emparelhar pares)
 let buildBank = [], buildAnswer = [], buildChecked = false, buildLastKey = null;
 let buildWrong = false, buildGaveUp = false;
@@ -2034,6 +2197,16 @@ function parseImportEntry(entry, fallbackTheme) {
 }
 
 function pool() { return allItems().filter(i => i.theme === currentTheme); }
+// practicePool() é o que a pessoa realmente vê ao percorrer o Praticar e o
+// Escrever: os mesmos itens de pool(), mas com uma ordem persistente
+// (guardada por tema, como já acontece nos Exercícios) que intercala os
+// moldes de frase — evita mostrar 10-12 frases seguidas com a mesma
+// estrutura (só a trocar a última palavra), que é o que acontecia porque
+// o gerador cria as variantes de um molde todas juntas antes de passar ao
+// seguinte. Tem de ser uma ordem persistente, e não recalculada a cada
+// render(), senão practiceIdx/writeIdx apontavam para frases diferentes a
+// cada instante.
+function practicePool() { return resolveOrder("pr", currentTheme); }
 
 // ---------- Progresso híbrido persistente (localStorage) ----------
 // Cada tema+modo ("ex" = exercícios, "pr" = praticar) guarda:
@@ -2048,20 +2221,45 @@ function loadJSON(key, fallback) {
 }
 function saveJSON(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
 
+// Baralha os itens evitando que o mesmo molde de frase apareça em posições
+// seguidas (ex.: 5-6 frases seguidas do tipo "Jeg søker jobb som ___",
+// só a trocar a profissão). item.blank já serve de "assinatura do molde",
+// porque frases geradas a partir do mesmo molde (genMulti) partilham
+// sempre o mesmo texto com "___" — só muda a palavra que o preenche.
+// Agrupa por molde e intercala em rondas (uma frase de cada molde por
+// ronda), o que espalha ao máximo os moldes mais repetidos.
+function interleaveByTemplate(ids, itemsMap) {
+  const buckets = new Map();
+  ids.forEach(id => {
+    const item = itemsMap.get(id);
+    const key = item ? item.blank : id;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(id);
+  });
+  let queues = shuffle(Array.from(buckets.values())).map(arr => shuffle(arr.slice()));
+  const result = [];
+  while (queues.some(q => q.length)) {
+    queues = shuffle(queues);
+    for (const q of queues) if (q.length) result.push(q.shift());
+  }
+  return result;
+}
 function getOrderIds(mode, theme) {
   const themeIds = mode === "ex" ? themeGroupIds(theme) : [theme];
   const groupTheme = mode === "ex" ? themeGroupKey(theme) : theme;
-  const ids = allItems().filter(i => themeIds.includes(i.theme)).map(i => i.id);
+  const items = allItems().filter(i => themeIds.includes(i.theme));
+  const itemsMap = new Map(items.map(i => [i.id, i]));
+  const ids = items.map(i => i.id);
   const idSet = new Set(ids);
   let order = loadJSON(orderKey(mode, groupTheme), null);
   if (!order) {
-    order = shuffle(ids.slice());
+    order = interleaveByTemplate(ids, itemsMap);
     saveJSON(orderKey(mode, groupTheme), order);
     return order;
   }
   let filtered = order.filter(id => idSet.has(id));
   const missing = ids.filter(id => !filtered.includes(id));
-  if (missing.length) filtered = filtered.concat(shuffle(missing));
+  if (missing.length) filtered = filtered.concat(interleaveByTemplate(missing, itemsMap));
   if (filtered.length !== order.length) saveJSON(orderKey(mode, groupTheme), filtered);
   return filtered;
 }
@@ -2113,23 +2311,31 @@ function renderThemeTabs() {
   const el = document.getElementById("themeTabs");
   const themes = getThemes();
   el.innerHTML = themes.map(t => {
+    const unlocked = isThemeUnlocked(t.id);
     const order = resolveOrder("ex", t.id);
     const cursor = order.length ? Math.min(getCursor("ex", t.id, order.length), order.length) : 0;
     const pct = order.length ? Math.round((cursor / order.length) * 100) : 0;
     // Sinal rápido de progresso, visível sem ires a 📊 Progresso: ✓ quando
     // já respondeste certo a tudo pelo menos uma vez, ou a percentagem
     // enquanto ainda vais a meio. Nada aparece em temas por começar.
-    const badge = !order.length ? "" : pct >= 100
+    const badge = !unlocked ? "" : !order.length ? "" : pct >= 100
       ? ` <span class="theme-progress done">✓</span>`
       : pct > 0 ? ` <span class="theme-progress">${pct}%</span>` : "";
-    return `<button class="tab-btn ${t.id === currentTheme ? "active" : ""}" data-theme="${t.id}">${t.label}${badge}</button>`;
+    const label = unlocked ? t.label : `🔒 ${t.label}`;
+    return `<button class="tab-btn ${t.id === currentTheme ? "active" : ""} ${unlocked ? "" : "locked"}" data-theme="${t.id}" data-locked="${unlocked ? "0" : "1"}">${label}${badge}</button>`;
   }).join("");
   el.querySelectorAll(".tab-btn").forEach(b => {
     b.onclick = () => {
+      if (b.dataset.locked === "1") {
+        const idx = themeLevelIndex(b.dataset.theme);
+        const prevLevel = LEVEL_PATH[idx - 1];
+        showToast(prevLevel ? `🔒 Chega a ${LEVEL_UNLOCK_PCT}% em "${prevLevel.label}" para desbloquear.` : "🔒 Ainda bloqueado.");
+        return;
+      }
       if (b.dataset.theme === currentTheme) return;
       currentTheme = b.dataset.theme;
       practiceIdx = loadPracticeIdx(currentTheme);
-      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0; writeQIdx = 0; writeRevealed = false; buildLastKey = null;
+      heard = ""; result = null; micError = ""; listening = false; showPhonetic = false; writeIdx = 0; writeQIdx = 0; writeInput = ""; writeChecked = false; writeResult = null; buildLastKey = null;
       exSelected = null; exerciseOptions = null;
       testState = { running: false, set: [], idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
       render();
@@ -2228,7 +2434,7 @@ function renderNews() {
 }
 
 function renderPractice() {
-  const p = pool();
+  const p = practicePool();
 
   if (practiceIdx >= p.length) {
     return `
@@ -2313,8 +2519,24 @@ function renderPractice() {
   `;
 }
 
+// Compara o que a pessoa escreveu com a frase certa, com uma pequena
+// tolerância a gralhas de digitação (distância de Levenshtein — a mesma
+// métrica já usada para pontuar a pronúncia). Tolera até 2 letras
+// trocadas/erradas, ou até 8% do comprimento da frase para frases mais
+// longas (o que for maior), para não penalizar things como maiúsculas ou
+// um caractere a mais/menos numa frase grande.
+function checkWriteAnswer(userText, target) {
+  const norm = (s) => s.toLowerCase().trim().replace(/\s+/g, " ").replace(/[.,!?;:]/g, "");
+  const u = norm(userText), t = norm(target);
+  const dist = levenshtein(u, t);
+  const maxAllowed = Math.max(2, Math.ceil(t.length * 0.08));
+  const exact = dist === 0;
+  const closeEnough = !exact && dist <= maxAllowed;
+  return { dist, exact, closeEnough, correct: exact || closeEnough };
+}
+
 function renderWrite() {
-  const p = pool();
+  const p = practicePool();
   if (!p.length) {
     return `<div class="card center-card"><p class="translation">Ainda não há frases neste tema.</p></div>`;
   }
@@ -2323,8 +2545,29 @@ function renderWrite() {
     <div class="btn-row" style="margin-bottom:16px;flex-wrap:wrap">
       <button class="tab-btn ${writeMode === "recall" ? "active" : ""}" id="btnWriteModeRecall">🧠 Memória</button>
       <button class="tab-btn ${writeMode === "question" ? "active" : ""}" id="btnWriteModeQuestion">❓ Pensar a pergunta${qaCount ? "" : " (0)"}</button>
-      <button class="tab-btn ${writeMode === "copy" ? "active" : ""}" id="btnWriteModeCopy">📋 Copiar (caligrafia)</button>
+      <button class="tab-btn ${writeMode === "copy" ? "active" : ""}" id="btnWriteModeCopy">⌨️ Copiar (com o teclado)</button>
     </div>`;
+
+  // Campo de texto + botão "Verificar" partilhados pelos 3 sub-modos —
+  // compara com tolerância a gralhas (ver checkWriteAnswer). ptTarget é
+  // sempre mostrado no feedback, mesmo quando a resposta está certa, para
+  // reforçar o significado.
+  const inputBlock = (target, ptTarget) => {
+    const tier = writeChecked ? (writeResult.exact ? "correct" : writeResult.closeEnough ? "warn" : "wrong") : "";
+    const inputHtml = `
+      <textarea class="write-input ${tier}" id="writeInputField" placeholder="Escreve aqui em norueguês..." ${writeChecked ? "readonly" : ""}>${writeInput}</textarea>
+      ${!writeChecked ? `<button class="btn next" id="btnWriteCheck" ${writeInput.trim() ? "" : "disabled"}>Verificar</button>` : ""}
+    `;
+    const listenHtml = writeChecked ? `<div class="btn-row" style="margin-top:8px"><button class="btn listen" id="btnWriteOuvir">🔊 Ouvir a frase certa</button></div>` : "";
+    const feedback = writeChecked ? feedbackSheetHtml({
+      tier,
+      title: writeResult.exact ? "Perfeito!" : writeResult.closeEnough ? "Muito bem! (pequena gralha)" : "Ainda não está certo",
+      detail: `A frase certa é: <b>${target}</b>${ptTarget ? ` — ${ptTarget}` : ""}`,
+      btnId: "btnWriteNext",
+      btnLabel: "CONTINUAR",
+    }) : "";
+    return { inputHtml, listenHtml, feedback };
+  };
 
   // ---- Modo "Pensar a pergunta": mostra só a resposta, tens de escrever a pergunta ----
   if (writeMode === "question") {
@@ -2338,6 +2581,7 @@ function renderWrite() {
     }
     if (writeQIdx >= qaItems.length) writeQIdx = 0;
     const { qa } = qaItems[writeQIdx];
+    const { inputHtml, listenHtml, feedback } = inputBlock(qa.question, qa.ptQuestion);
     return `
       <div class="card">
         <p class="card-label mono">pensar a pergunta ${writeQIdx + 1} de ${qaItems.length}</p>
@@ -2346,19 +2590,11 @@ function renderWrite() {
         <p class="sentence display">${wordTapHtml(qa.answer)}</p>
         <p class="translation" style="margin-bottom:16px">${qa.ptAnswer}</p>
         <p class="note" style="margin-bottom:16px">Escreve, de memória, a PERGUNTA em norueguês que levaria a esta resposta.</p>
-        <div class="canvas-wrap"><canvas id="writeCanvas"></canvas></div>
-        <div class="btn-row" style="margin-top:12px">
-          <button class="btn" id="btnClearCanvas">🧹 Limpar</button>
-          <button class="btn" id="btnWriteReveal">${writeRevealed ? "🙈 Esconder" : "👁️ Ver pergunta certa"}</button>
-        </div>
-        ${writeRevealed ? `
-          <div class="gloss-block" style="margin-top:12px">
-            <p class="sentence display" style="font-size:18px">${wordTapHtml(qa.question)}</p>
-            <p class="translation">${qa.ptQuestion}</p>
-            <button class="btn listen" id="btnWriteOuvir" style="margin-top:8px">🔊 Ouvir</button>
-          </div>` : ""}
-        <button class="btn next" id="btnWriteNext" style="margin-top:16px">Próxima →</button>
+        ${inputHtml}
+        ${listenHtml}
+        ${writeChecked ? `<div style="height:100px"></div>` : ""}
       </div>
+      ${feedback}
       <p class="note">Modo pergunta: obriga-te a pensar em como se pergunta algo em norueguês, não só a copiar a resposta.</p>
     `;
   }
@@ -2368,32 +2604,27 @@ function renderWrite() {
     if (writeIdx >= p.length) writeIdx = 0;
     const item = p[writeIdx];
     const target = fullSentence(item);
+    const { inputHtml, listenHtml, feedback } = inputBlock(target, item.pt);
     return `
       <div class="card">
         <p class="card-label mono">escrever de memória ${writeIdx + 1} de ${p.length}</p>
         ${modeBar(p.filter(splitQA).length)}
         <p class="translation" style="font-size:18px;margin-bottom:16px">${item.pt}</p>
         <p class="note" style="margin-bottom:16px">Escreve a frase completa em norueguês, de memória — sem espreitar.</p>
-        <div class="canvas-wrap"><canvas id="writeCanvas"></canvas></div>
-        <div class="btn-row" style="margin-top:12px">
-          <button class="btn" id="btnClearCanvas">🧹 Limpar</button>
-          <button class="btn" id="btnWriteReveal">${writeRevealed ? "🙈 Esconder" : "👁️ Ver resposta"}</button>
-        </div>
-        ${writeRevealed ? `
-          <div class="gloss-block" style="margin-top:12px">
-            <p class="sentence display" style="font-size:18px">${wordTapHtml(target)}</p>
-            <button class="btn listen" id="btnWriteOuvir" style="margin-top:8px">🔊 Ouvir</button>
-          </div>` : ""}
-        <button class="btn next" id="btnWriteNext" style="margin-top:16px">Próxima frase →</button>
+        ${inputHtml}
+        ${listenHtml}
+        ${writeChecked ? `<div style="height:100px"></div>` : ""}
       </div>
-      <p class="note">Modo memória: não vês a frase em norueguês antes de a escreveres — só depois, quando carregares em "Ver resposta".</p>
+      ${feedback}
+      <p class="note">Modo memória: não vês a frase em norueguês antes de a escreveres — só ao carregares em "Verificar".</p>
     `;
   }
 
-  // ---- Modo "Copiar": o comportamento original, bom para treinar o traço/ortografia ----
+  // ---- Modo "Copiar": vês a frase e escreves-la com o teclado (ortografia, æ/ø/å, espaços) ----
   if (writeIdx >= p.length) writeIdx = 0;
   const item = p[writeIdx];
   const target = fullSentence(item);
+  const { inputHtml, listenHtml, feedback } = inputBlock(target, item.pt);
   return `
     <div class="card">
       <p class="card-label mono">copiar ${writeIdx + 1} de ${p.length}</p>
@@ -2403,13 +2634,11 @@ function renderWrite() {
       <div class="btn-row" style="margin-bottom:16px">
         <button class="btn listen" id="btnWriteOuvir">🔊 Ouvir</button>
       </div>
-      <div class="canvas-wrap"><canvas id="writeCanvas"></canvas></div>
-      <div class="btn-row">
-        <button class="btn" id="btnClearCanvas">🧹 Limpar</button>
-        <button class="btn next" id="btnWriteNext">Próxima frase →</button>
-      </div>
+      ${inputHtml}
+      ${writeChecked ? `<div style="height:100px"></div>` : ""}
     </div>
-    <p class="note">Escreve a frase à mão na tela, copiando o que vês acima — bom para treinares o æ, ø, å e a ortografia. Não há correção automática, é só para praticares o traço.</p>
+    ${feedback}
+    <p class="note">Escreve a frase que vês acima, com o teclado — bom para treinares a ortografia (æ, ø, å) e onde ficam os espaços.</p>
   `;
 }
 
@@ -2567,7 +2796,11 @@ function renderExercises() {
       if (isMatched) cls += " correct";
       else if (isWrong) cls += " wrong";
       else if (isSel) cls += " selected";
-      return `<button class="${cls}" data-side="${side}" data-id="${id}" ${isMatched ? "disabled" : ""}>${label}</button>`;
+      // Só o lado norueguês (direita) fica também "tap-word" — dá para
+      // manter premido para ouvir a pronúncia, sem tirar a ação normal de
+      // toque (escolher o par), que continua igual.
+      const tapAttrs = side === "r" ? ` tap-word" data-word="${label.replace(/"/g, "&quot;")}` : "";
+      return `<button class="${cls}${tapAttrs}" data-side="${side}" data-id="${id}" ${isMatched ? "disabled" : ""}>${label}</button>`;
     };
     const bodyHtml = pairs.length < 2
       ? `<p class="translation">Este tema ainda não tem palavras suficientes para emparelhar.</p>`
@@ -2608,12 +2841,25 @@ function renderExercises() {
             const correctWord = (targetWords[i] || "").toLowerCase();
             cls += t.text.toLowerCase() === correctWord ? " correct" : " wrong";
           }
-          return `<button class="${cls}" data-tile="${t.id}" data-zone="answer">${t.text}</button>`;
+          // Toque curto continua a tirar a peça da frase (como sempre);
+          // toque longo ouve a palavra — só faz sentido nos modos com
+          // blocos em norueguês (build/listen), não em listenTranslate
+          // (onde os blocos já são a tradução em português).
+          const tap = exMode !== "listenTranslate" ? ` tap-word-piece" data-word="${t.text.replace(/"/g, "&quot;")}` : "";
+          return `<button class="${cls}${tap}" data-tile="${t.id}" data-zone="answer">${t.text}</button>`;
         }).join("")
       : `<span style="color:var(--muted);font-size:13px">toca nas palavras abaixo, pela ordem certa</span>`;
-    const bankHtml = buildBank.map(t => `<button class="word-chip" data-tile="${t.id}" data-zone="bank">${t.text}</button>`).join("");
+    const bankHtml = buildBank.map(t => {
+      const tap = exMode !== "listenTranslate" ? ` tap-word-piece" data-word="${t.text.replace(/"/g, "&quot;")}` : "";
+      return `<button class="word-chip${tap}" data-tile="${t.id}" data-zone="bank">${t.text}</button>`;
+    }).join("");
 
-    const listenBtn = `<div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnExListenTop">🔊 Ouvir</button></div>`;
+    const listenBtn = `
+      <div class="btn-row" style="margin-bottom:8px"><button class="btn listen" id="btnExListenTop">🔊 Ouvir</button></div>
+      <div class="news-speed-block">
+        <div class="news-speed-label"><span>velocidade</span><span class="mono">${newsRate.toFixed(2)}x</span></div>
+        <input class="news-speed-slider" id="buildSpeedSlider" type="range" min="0.5" max="1.0" step="0.05" value="${newsRate}">
+      </div>`;
     const promptHtml = exMode === "build"
       ? `<p class="translation" style="font-size:17px;margin-bottom:8px">${item.pt}</p>${listenBtn}`
       : `${listenBtn}<p class="note" style="margin-bottom:16px">${exMode === "listen" ? "Ouve quantas vezes precisares e constrói a frase em norueguês que ouviste." : "Ouve a frase em norueguês e constrói a TRADUÇÃO em português com os blocos abaixo."}</p>`;
@@ -2832,13 +3078,13 @@ function attachHandlers() {
   if (currentTab === "practice") {
     const btnOuvir = document.getElementById("btnOuvir");
     if (btnOuvir) btnOuvir.onclick = () => {
-      const p = pool(); const item = p[practiceIdx];
+      const p = practicePool(); const item = p[practiceIdx];
       speak(fullSentence(item), (msg) => { micError = msg; render(); });
     };
     const btnFalar = document.getElementById("btnFalar");
     if (btnFalar) btnFalar.onclick = () => { listening ? stopListening() : startListening(); };
     const goTo = (idx) => {
-      const p = pool();
+      const p = practicePool();
       practiceIdx = Math.max(0, Math.min(idx, p.length));
       savePracticeIdx(currentTheme, practiceIdx);
       heard = ""; result = null; micError = ""; showPhonetic = false;
@@ -2870,19 +3116,18 @@ function attachHandlers() {
     };
   }
   if (currentTab === "write") {
+    // Trocar de sub-modo limpa sempre a tentativa atual.
+    function resetWriteAttempt() { writeInput = ""; writeChecked = false; writeResult = null; }
     const btnModeRecall = document.getElementById("btnWriteModeRecall");
-    if (btnModeRecall) btnModeRecall.onclick = () => { writeMode = "recall"; writeRevealed = false; render(); };
+    if (btnModeRecall) btnModeRecall.onclick = () => { writeMode = "recall"; resetWriteAttempt(); render(); };
     const btnModeQuestion = document.getElementById("btnWriteModeQuestion");
-    if (btnModeQuestion) btnModeQuestion.onclick = () => { writeMode = "question"; writeRevealed = false; render(); };
+    if (btnModeQuestion) btnModeQuestion.onclick = () => { writeMode = "question"; resetWriteAttempt(); render(); };
     const btnModeCopy = document.getElementById("btnWriteModeCopy");
-    if (btnModeCopy) btnModeCopy.onclick = () => { writeMode = "copy"; writeRevealed = false; render(); };
-
-    const btnWriteReveal = document.getElementById("btnWriteReveal");
-    if (btnWriteReveal) btnWriteReveal.onclick = () => { writeRevealed = !writeRevealed; render(); };
+    if (btnModeCopy) btnModeCopy.onclick = () => { writeMode = "copy"; resetWriteAttempt(); render(); };
 
     const btnWriteOuvirPrompt = document.getElementById("btnWriteOuvirPrompt");
     if (btnWriteOuvirPrompt) btnWriteOuvirPrompt.onclick = () => {
-      const p = pool();
+      const p = practicePool();
       const qaItems = p.map(splitQA).filter(Boolean);
       if (!qaItems.length) return;
       const qa = qaItems[writeQIdx % qaItems.length];
@@ -2890,7 +3135,7 @@ function attachHandlers() {
     };
     const btnWriteOuvir = document.getElementById("btnWriteOuvir");
     if (btnWriteOuvir) btnWriteOuvir.onclick = () => {
-      const p = pool();
+      const p = practicePool();
       if (writeMode === "question") {
         const qaItems = p.map(splitQA).filter(Boolean);
         if (!qaItems.length) return;
@@ -2902,23 +3147,46 @@ function attachHandlers() {
         speak(fullSentence(item), () => {});
       }
     };
-    const canvas = document.getElementById("writeCanvas");
-    if (canvas) setupCanvas(canvas);
-    const btnClearCanvas = document.getElementById("btnClearCanvas");
-    if (btnClearCanvas) btnClearCanvas.onclick = () => {
-      const c = document.getElementById("writeCanvas");
-      if (c) c.getContext("2d").clearRect(0, 0, c.width, c.height);
+
+    // O campo de texto NUNCA chama render() ao escrever — só atualiza a
+    // variável e ativa/desativa o botão "Verificar" diretamente no DOM.
+    // Chamar render() a cada tecla substituía o <textarea> por um novo nó
+    // e fazia perder o cursor/foco a cada letra, no telemóvel.
+    const writeInputField = document.getElementById("writeInputField");
+    if (writeInputField) writeInputField.oninput = () => {
+      writeInput = writeInputField.value;
+      const btn = document.getElementById("btnWriteCheck");
+      if (btn) btn.disabled = !writeInput.trim();
+    };
+
+    const btnWriteCheck = document.getElementById("btnWriteCheck");
+    if (btnWriteCheck) btnWriteCheck.onclick = () => {
+      const p = practicePool();
+      let target;
+      if (writeMode === "question") {
+        const qaItems = p.map(splitQA).filter(Boolean);
+        if (!qaItems.length) return;
+        target = qaItems[writeQIdx % qaItems.length].question;
+      } else {
+        if (!p.length) return;
+        target = fullSentence(p[writeIdx % p.length]);
+      }
+      writeResult = checkWriteAnswer(writeInput, target);
+      writeChecked = true;
+      touchStreak();
+      if (writeResult.correct) addPoint();
+      render();
     };
     const btnWriteNext = document.getElementById("btnWriteNext");
     if (btnWriteNext) btnWriteNext.onclick = () => {
       touchStreak();
-      writeRevealed = false;
+      resetWriteAttempt();
       if (writeMode === "question") {
-        const p = pool();
+        const p = practicePool();
         const qaCount = p.map(splitQA).filter(Boolean).length;
         writeQIdx = qaCount ? (writeQIdx + 1) % qaCount : 0;
       } else {
-        const p = pool();
+        const p = practicePool();
         writeIdx = p.length ? (writeIdx + 1) % p.length : 0;
       }
       render();
@@ -2997,6 +3265,12 @@ function attachHandlers() {
         const item = order[viewIdx];
         speak(fullSentence(item), () => {});
       };
+      const buildSpeedSlider = document.getElementById("buildSpeedSlider");
+      if (buildSpeedSlider) buildSpeedSlider.onchange = () => {
+        newsRate = parseFloat(buildSpeedSlider.value);
+        saveNewsRate(newsRate);
+        render();
+      };
       const btnExListenResult = document.getElementById("btnExListenResult");
       if (btnExListenResult) btnExListenResult.onclick = () => {
         const order = resolveOrder("ex", theme);
@@ -3008,6 +3282,11 @@ function attachHandlers() {
       document.querySelectorAll('#wordPool [data-tile]').forEach(b => {
         b.onclick = () => {
           if (buildChecked) return;
+          // toque longo já tratou isto como "ouvir" — não mexe na peça.
+          // Aqui é que se limpa a flag: o handler global já não trata
+          // das peças (.tap-word-piece), por isso é o próprio bloco que
+          // tem de repor tapWordLongPressed a false.
+          if (tapWordLongPressed) { tapWordLongPressed = false; return; }
           const id = b.dataset.tile;
           const idx = buildBank.findIndex(t => t.id === id);
           if (idx === -1) return;
@@ -3019,6 +3298,7 @@ function attachHandlers() {
       document.querySelectorAll('#answerArea [data-tile]').forEach(b => {
         b.onclick = () => {
           if (buildChecked) return;
+          if (tapWordLongPressed) { tapWordLongPressed = false; return; }
           const id = b.dataset.tile;
           const idx = buildAnswer.findIndex(t => t.id === id);
           if (idx === -1) return;
@@ -3203,7 +3483,7 @@ function attachHandlers() {
         currentTheme = row.dataset.jumpTheme;
         practiceIdx = loadPracticeIdx(currentTheme);
         heard = ""; result = null; micError = ""; listening = false; showPhonetic = false;
-        writeIdx = 0; writeQIdx = 0; writeRevealed = false; buildLastKey = null;
+        writeIdx = 0; writeQIdx = 0; writeInput = ""; writeChecked = false; writeResult = null; buildLastKey = null;
         exSelected = null; exerciseOptions = null;
         currentTab = "exercises";
         render();
@@ -3424,7 +3704,7 @@ function startListening() {
   };
   rec.onend = () => {
     listening = false;
-    const p = pool(); const item = p[practiceIdx];
+    const p = practicePool(); const item = p[practiceIdx];
     // confiança 0 é um valor real do browser, por isso comparamos com null explicitamente
     if (heard) result = compareSentences(fullSentence(item), heard, lastConfidence === null ? undefined : lastConfidence);
     render();
@@ -3625,50 +3905,6 @@ function renderAdd() {
   `;
 }
 
-// ---------- Handwriting canvas (mouse, touch, and stylus via Pointer Events) ----------
-function setupCanvas(canvas) {
-  const ctx = canvas.getContext("2d");
-  const dpr = window.devicePixelRatio || 1;
-  const cssHeight = 220;
-  const cssWidth = canvas.getBoundingClientRect().width || canvas.parentElement.clientWidth;
-  canvas.width = Math.round(cssWidth * dpr);
-  canvas.height = Math.round(cssHeight * dpr);
-  ctx.scale(dpr, dpr);
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.strokeStyle = "#EDEFF5";
-
-  let drawing = false;
-  let last = null;
-
-  function pos(e) {
-    const r = canvas.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  }
-  canvas.onpointerdown = (e) => {
-    drawing = true;
-    canvas.setPointerCapture(e.pointerId);
-    last = pos(e);
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, ctx.lineWidth / 2, 0, Math.PI * 2);
-    ctx.fillStyle = ctx.strokeStyle;
-    ctx.fill();
-  };
-  canvas.onpointermove = (e) => {
-    if (!drawing) return;
-    const p = pos(e);
-    ctx.beginPath();
-    ctx.moveTo(last.x, last.y);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    last = p;
-  };
-  const stop = () => { drawing = false; };
-  canvas.onpointerup = stop;
-  canvas.onpointerleave = stop;
-  canvas.onpointercancel = stop;
-}
 
 // ---------- Leitor de jornal: motor de reprodução ----------
 function highlightNewsWord(sentIdx, wordIdx) {
@@ -3801,7 +4037,10 @@ function startTest() {
   // Entre 15 e 20 perguntas por teste (limitado pelo tamanho da pool do tema).
   const target = 15 + Math.floor(Math.random() * 6);
   const size = Math.min(target, p.length);
-  testState = { running: true, pool: p, set: shuffle(p).slice(0, size), idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
+  const itemsMap = new Map(p.map(i => [i.id, i]));
+  const orderedIds = interleaveByTemplate(p.map(i => i.id), itemsMap);
+  const set = orderedIds.slice(0, size).map(id => itemsMap.get(id));
+  testState = { running: true, pool: p, set, idx: 0, selected: null, currentOptions: null, tally: 0, finished: false, lastScore: null };
   render();
 }
 function finishTest() {
@@ -3824,37 +4063,51 @@ document.querySelectorAll("#mainTabs .tab-btn").forEach(btn => {
   };
 });
 
-// Toca em qualquer palavra norueguesa (.tap-word), em qualquer ecrã, a
-// qualquer momento — ligado uma única vez ao document, por isso continua a
+// Toca em qualquer palavra norueguesa, em qualquer ecrã, a qualquer
+// momento — ligado uma única vez ao document, por isso continua a
 // funcionar depois de cada render() sem precisar de ser religado.
-// Toque curto = tradução; toque longo (~450ms) = ouvir a palavra a ser
-// pronunciada. O longPressFired evita que o toque curto também dispare
-// depois de um toque longo já ter sido tratado.
+//
+// Duas classes, dois comportamentos:
+// - .tap-word (a generalidade das frases, incluindo os pares do
+//   Emparelhar): toque curto = OUVE a palavra logo; toque longo (~450ms) =
+//   mostra a tradução.
+// - .tap-word-piece (só os blocos de "Construir a frase"/"Ditado"): o
+//   toque curto já tem uma função própria (mover a peça, tratada no
+//   handler do próprio bloco) — por isso aqui só o toque longo faz
+//   alguma coisa, e é sempre "ouvir" (nunca tradução), como já estava.
 let tapWordTimer = null, tapWordLongPressed = false;
 function clearTapWordTimer() { if (tapWordTimer) { clearTimeout(tapWordTimer); tapWordTimer = null; } }
 document.addEventListener("pointerdown", (e) => {
-  const el = e.target.closest(".tap-word");
+  const el = e.target.closest(".tap-word, .tap-word-piece");
   if (!el) return;
   tapWordLongPressed = false;
   el.classList.add("tap-word-holding");
   tapWordTimer = setTimeout(() => {
     tapWordLongPressed = true;
     el.classList.remove("tap-word-holding");
-    speak(el.dataset.word, () => {});
+    if (el.classList.contains("tap-word-piece")) {
+      speak(el.dataset.word, () => {});
+    } else {
+      showWordToast(el.dataset.word);
+    }
   }, 450);
 });
 ["pointerup", "pointercancel", "pointerleave"].forEach(evt => {
   document.addEventListener(evt, (e) => {
-    const el = e.target.closest(".tap-word");
+    const el = e.target.closest(".tap-word, .tap-word-piece");
     if (el) el.classList.remove("tap-word-holding");
     clearTapWordTimer();
   }, true);
 });
 document.addEventListener("click", (e) => {
+  // .tap-word-piece: o toque curto é tratado inteiramente pelo handler do
+  // próprio bloco (move a peça); o toque longo já disse "ouvir" lá em
+  // cima. Nada a fazer aqui.
+  if (e.target.closest(".tap-word-piece")) return;
   const el = e.target.closest(".tap-word");
   if (!el) return;
   if (tapWordLongPressed) { tapWordLongPressed = false; return; }
-  showWordToast(el.dataset.word);
+  speak(el.dataset.word, () => {});
 });
 
 // Modal de gramática — botão fixo no cabeçalho, fora do ciclo de render().
