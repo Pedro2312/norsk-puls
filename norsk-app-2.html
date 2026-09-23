@@ -1,0 +1,2868 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Norsk for deg</title>
+<link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
+<style>
+  html, body { margin: 0; padding: 0; background: hsl(160, 22%, 14%); }
+  body { display: flex; justify-content: center; }
+  #root { width: 100%; max-width: 480px; min-height: 100vh; }
+  input[type="text"] { font-family: inherit; font-size: 14px; padding: 10px 12px; border-radius: 10px; border: 0.5px solid #4A4A43; background: #2F2F2B; color: #F1EFE8; box-sizing: border-box; }
+  button { font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<script>
+window.storage = {
+  get: async function(key, shared) {
+    try {
+      var raw = localStorage.getItem("norsk_" + key);
+      if (raw === null) return null;
+      return { key: key, value: raw, shared: !!shared };
+    } catch (e) { return null; }
+  },
+  set: async function(key, value, shared) {
+    try {
+      localStorage.setItem("norsk_" + key, value);
+      return { key: key, value: value, shared: !!shared };
+    } catch (e) { return null; }
+  },
+  delete: async function(key, shared) {
+    try {
+      localStorage.removeItem("norsk_" + key);
+      return { key: key, deleted: true, shared: !!shared };
+    } catch (e) { return null; }
+  },
+  list: async function(prefix, shared) {
+    try {
+      var p = "norsk_" + (prefix || "");
+      var keys = Object.keys(localStorage).filter(function(k) { return k.indexOf(p) === 0; }).map(function(k) { return k.slice(6); });
+      return { keys: keys, prefix: prefix, shared: !!shared };
+    } catch (e) { return null; }
+  },
+};
+</script>
+
+<script>
+const { useState, useEffect, useRef, useMemo, Fragment } = React;
+const LESSONS = [
+  {
+    id: "numbers",
+    title: "N\xFAmeros",
+    color: "#7F77DD",
+    tier: 1,
+    grammar: {
+      title: "'En' e 'ett'",
+      text: "'En' \xE9 usado com palavras de g\xEAnero comum ('en bok') e 'ett' com neutras ('ett hus') quando significa 'um'. A partir de dois, os n\xFAmeros n\xE3o mudam de forma."
+    },
+    items: [
+      { type: "mc", prompt: "Como se diz 'tr\xEAs' em noruegu\xEAs?", options: ["Tre", "Fire", "To", "Fem"], answer: "Tre", audio: "Tre" },
+      { type: "mc", prompt: "'Sju' significa:", options: ["Sete", "Oito", "Seis", "Nove"], answer: "Sete", audio: "Sju" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "fem", audio: "Fem", pt: "Cinco" },
+      { type: "mc", prompt: "'Ti' significa:", options: ["Dez", "Nove", "Vinte", "Cem"], answer: "Dez", audio: "Ti" },
+      { type: "translate", prompt: "Traduza: 'dois'", answer: "to", audio: "To" }
+    ]
+  },
+  {
+    id: "food",
+    title: "Comida e bebida",
+    color: "#BA7517",
+    tier: 1,
+    grammar: {
+      title: "Artigos indefinidos",
+      text: "'En' (comum) e 'et' (neutro) v\xEAm antes do substantivo, como 'um/uma': 'en kaffe', 'et eple'."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'vann'?", options: ["\xC1gua", "Leite", "Vinho", "Suco"], answer: "\xC1gua", audio: "Vann" },
+      { type: "mc", prompt: "O que significa 'br\xF8d'?", options: ["P\xE3o", "Queijo", "Manteiga", "Arroz"], answer: "P\xE3o", audio: "Br\xF8d" },
+      { type: "translate", prompt: "Traduza: 'caf\xE9'", answer: "kaffe", audio: "Kaffe" },
+      { type: "mc", prompt: "'Fisk' significa:", options: ["Peixe", "Carne", "Frango", "Ovo"], answer: "Peixe", audio: "Fisk" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "eple", audio: "Eple", pt: "Ma\xE7\xE3" }
+    ]
+  },
+  {
+    id: "colors",
+    title: "Cores",
+    color: "#E24B4A",
+    tier: 1,
+    grammar: {
+      title: "Concord\xE2ncia de adjetivos",
+      text: "Adjetivos de cor concordam com o substantivo: 'r\xF8d' (comum), 'r\xF8dt' (neutro), 'r\xF8de' (plural). Ex: 'en r\xF8d bil', 'et r\xF8dt hus', 'r\xF8de epler'."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'bl\xE5'?", options: ["Azul", "Verde", "Amarelo", "Roxo"], answer: "Azul", audio: "Bl\xE5" },
+      { type: "mc", prompt: "O que significa 'gr\xF8nn'?", options: ["Verde", "Azul", "Preto", "Branco"], answer: "Verde", audio: "Gr\xF8nn" },
+      { type: "translate", prompt: "Traduza: 'vermelho'", answer: "r\xF8d", audio: "R\xF8d" },
+      { type: "mc", prompt: "'Svart' significa:", options: ["Preto", "Branco", "Cinza", "Marrom"], answer: "Preto", audio: "Svart" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "gul", audio: "Gul", pt: "Amarelo" }
+    ]
+  },
+  {
+    id: "greetings",
+    title: "Sauda\xE7\xF5es",
+    color: "#1D9E75",
+    tier: 1,
+    grammar: {
+      title: "Sobre sauda\xE7\xF5es",
+      text: "Em noruegu\xEAs, 'Hei' \xE9 o cumprimento mais comum e informal, usado a qualquer hora do dia \u2014 como 'oi' em portugu\xEAs. 'God dag' \xE9 mais formal."
+    },
+    items: [
+      { type: "mc", prompt: "Como se diz 'ol\xE1' em noruegu\xEAs?", options: ["Hei", "Ha det", "Takk", "Ja"], answer: "Hei", audio: "Hei" },
+      { type: "mc", prompt: "O que significa 'God morgen'?", options: ["Boa noite", "Bom dia", "Boa tarde", "At\xE9 logo"], answer: "Bom dia", audio: "God morgen" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "ha det", audio: "Ha det", pt: "Tchau (informal)" },
+      { type: "mc", prompt: "Como se diz 'obrigado'?", options: ["Takk", "V\xE6r s\xE5 snill", "Unnskyld", "Ja"], answer: "Takk", audio: "Takk" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "ja", audio: "Ja", pt: "Sim" }
+    ]
+  },
+  {
+    id: "family",
+    title: "Fam\xEDlia",
+    color: "#D4537E",
+    tier: 1,
+    grammar: {
+      title: "Posse com 'min / mi / mitt'",
+      text: "'Min' vai antes de palavras de g\xEAnero comum, 'mitt' antes de neutras. Ex: 'min bror' (meu irm\xE3o), 'mitt barn' (meu filho)."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'mor'?", options: ["M\xE3e", "Pai", "Irm\xE3", "Filho"], answer: "M\xE3e", audio: "Mor" },
+      { type: "mc", prompt: "O que significa 'bror'?", options: ["Irm\xE3o", "Irm\xE3", "Amigo", "Pai"], answer: "Irm\xE3o", audio: "Bror" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "far", audio: "Far", pt: "Pai" },
+      { type: "mc", prompt: "'S\xF8ster' significa:", options: ["Irm\xE3", "M\xE3e", "Esposa", "Filha"], answer: "Irm\xE3", audio: "S\xF8ster" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "mor", pt: "M\xE3e" }, { no: "far", pt: "Pai" }, { no: "bror", pt: "Irm\xE3o" }, { no: "s\xF8ster", pt: "Irm\xE3" }] }
+    ]
+  },
+  {
+    id: "house",
+    title: "Casa",
+    color: "#2563EB",
+    tier: 1,
+    grammar: {
+      title: "Preposi\xE7\xF5es de lugar",
+      text: "'I' significa 'em/dentro de': 'i huset' (na casa). 'P\xE5' significa 'em cima de' ou \xE9 usado em contextos espec\xEDficos: 'p\xE5 kj\xF8kkenet' (na cozinha)."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'hus'?", options: ["Casa", "Carro", "Quarto", "Jardim"], answer: "Casa", audio: "Hus" },
+      { type: "mc", prompt: "'Kj\xF8kken' significa:", options: ["Cozinha", "Sala", "Banheiro", "Quarto"], answer: "Cozinha", audio: "Kj\xF8kken" },
+      { type: "translate", prompt: "Traduza: 'quarto'", answer: "soverom", audio: "Soverom" },
+      { type: "arrange", prompt: "Monte a frase: 'A casa \xE9 grande'", answer: "Huset er stort", audio: "Huset er stort" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "hus", pt: "Casa" }, { no: "kj\xF8kken", pt: "Cozinha" }, { no: "soverom", pt: "Quarto" }] }
+    ]
+  },
+  {
+    id: "weather",
+    title: "Tempo e clima",
+    color: "#5F5E5A",
+    tier: 1,
+    grammar: {
+      title: "'Det er' para descrever o clima",
+      text: "Assim como 'est\xE1 frio' em portugu\xEAs, o noruegu\xEAs usa 'det er' (literalmente 'isso \xE9/est\xE1') para descrever o tempo: 'det er kaldt'."
+    },
+    items: [
+      { type: "mc", prompt: "'Det er kaldt' significa:", options: ["Est\xE1 frio", "Est\xE1 quente", "Est\xE1 chovendo", "Est\xE1 ventando"], answer: "Est\xE1 frio", audio: "Det er kaldt" },
+      { type: "mc", prompt: "O que significa 'sol'?", options: ["Sol", "Chuva", "Neve", "Vento"], answer: "Sol", audio: "Sol" },
+      { type: "translate", prompt: "Traduza: 'est\xE1 chovendo'", answer: "det regner", audio: "Det regner" },
+      { type: "mc", prompt: "'Sn\xF8' significa:", options: ["Neve", "Gelo", "Chuva", "Nuvem"], answer: "Neve", audio: "Sn\xF8" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "det er varmt", audio: "Det er varmt", pt: "Est\xE1 quente" }
+    ]
+  },
+  {
+    id: "clothes",
+    title: "Roupas",
+    color: "#059669",
+    tier: 1,
+    grammar: {
+      title: "G\xEAnero das roupas",
+      text: "Assim como as cores, os substantivos de roupas t\xEAm g\xEAnero: 'en jakke' (uma jaqueta, comum), 'et skjerf' (um cachecol, neutro)."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'jakke'?", options: ["Jaqueta", "Camisa", "Cal\xE7a", "Sapato"], answer: "Jaqueta", audio: "Jakke" },
+      { type: "mc", prompt: "'Sko' significa:", options: ["Sapato", "Meia", "Chap\xE9u", "Luva"], answer: "Sapato", audio: "Sko" },
+      { type: "translate", prompt: "Traduza: 'camisa'", answer: "skjorte", audio: "Skjorte" },
+      { type: "arrange", prompt: "Monte a frase: 'Eu preciso de uma jaqueta'", answer: "Jeg trenger en jakke", audio: "Jeg trenger en jakke" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "jakke", pt: "Jaqueta" }, { no: "sko", pt: "Sapato" }, { no: "skjorte", pt: "Camisa" }] }
+    ]
+  },
+  {
+    id: "transport",
+    title: "Transporte",
+    color: "#EA580C",
+    tier: 1,
+    grammar: {
+      title: "Meios de transporte com 'med'",
+      text: "Para dizer como voc\xEA se desloca, usa-se 'med' (de/com): 'Jeg reiser med buss' (Eu viajo de \xF4nibus)."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'buss'?", options: ["\xD4nibus", "Trem", "Carro", "Bicicleta"], answer: "\xD4nibus", audio: "Buss" },
+      { type: "mc", prompt: "'Tog' significa:", options: ["Trem", "Avi\xE3o", "Barco", "\xD4nibus"], answer: "Trem", audio: "Tog" },
+      { type: "translate", prompt: "Traduza: 'carro'", answer: "bil", audio: "Bil" },
+      { type: "arrange", prompt: "Monte a frase: 'Eu viajo de trem'", answer: "Jeg reiser med tog", audio: "Jeg reiser med tog" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "buss", pt: "\xD4nibus" }, { no: "tog", pt: "Trem" }, { no: "bil", pt: "Carro" }] }
+    ]
+  },
+  {
+    id: "calm",
+    title: "Emo\xE7\xF5es e calma",
+    color: "#0E7490",
+    tier: 1,
+    grammar: {
+      title: "'Litt' (um pouco)",
+      text: "'Litt' significa 'um pouco' e \xE9 usado antes de adjetivos para suavizar: 'litt redd' (um pouco assustado), 'litt sikker' (um pouco seguro)."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'redd'?", options: ["Com medo", "Feliz", "Cansado", "Zangado"], answer: "Com medo", audio: "Redd" },
+      { type: "mc", prompt: "'Trygg' significa:", options: ["Seguro", "Perdido", "Sozinho", "Cansado"], answer: "Seguro", audio: "Trygg" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "puste", audio: "Puste", pt: "Respirar" },
+      { type: "arrange", prompt: "Monte a frase: 'Eu estou com um pouco de medo'", answer: "Jeg er litt redd", audio: "Jeg er litt redd" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "redd", pt: "Com medo" }, { no: "trygg", pt: "Seguro" }, { no: "rolig", pt: "Calmo" }] }
+    ]
+  },
+  {
+    id: "shopping",
+    title: "Compras",
+    color: "#E11D48",
+    tier: 1,
+    grammar: {
+      title: "Pergunta com 'hvor mye' (quanto)",
+      text: "'Hvor mye koster...?' \xE9 a forma padr\xE3o de perguntar o pre\xE7o de algo."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "butikk"?', options: ["Loja", "Comprar", "Pre\xE7o", "Desconto"], answer: "Loja", audio: "Butikk" },
+      { type: "mc", prompt: 'O que significa "kj\xF8pe"?', options: ["Comprar", "Loja", "Pre\xE7o", "Desconto"], answer: "Comprar", audio: "Kj\xF8pe" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "pris", audio: "Pris", pt: "Pre\xE7o" },
+      { type: "arrange", prompt: 'Monte a frase: "Quanto custa isto?"', answer: "Hvor mye koster denne", audio: "Hvor mye koster denne", pt: "Quanto custa isto?" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "butikk", pt: "Loja" }, { no: "kj\xF8pe", pt: "Comprar" }, { no: "pris", pt: "Pre\xE7o" }] }
+    ]
+  },
+  {
+    id: "hobbies",
+    title: "Passatempos",
+    color: "#0D9488",
+    tier: 1,
+    grammar: {
+      title: "Verbo '\xE5 like' + infinitivo",
+      text: "'Like' (gostar) \xE9 seguido de outro verbo no infinitivo com '\xE5': 'jeg liker \xE5 lese' (gosto de ler)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "hobby"?', options: ["Passatempo", "Ler", "Jogar", "Treinar / exercitar-se"], answer: "Passatempo", audio: "Hobby" },
+      { type: "mc", prompt: 'O que significa "lese"?', options: ["Ler", "Passatempo", "Jogar", "Treinar / exercitar-se"], answer: "Ler", audio: "Lese" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "spille", audio: "Spille", pt: "Jogar" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu gosto de ler livros"', answer: "Jeg liker \xE5 lese b\xF8ker", audio: "Jeg liker \xE5 lese b\xF8ker", pt: "Eu gosto de ler livros" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "hobby", pt: "Passatempo" }, { no: "lese", pt: "Ler" }, { no: "spille", pt: "Jogar" }] }
+    ]
+  },
+  {
+    id: "finn-after",
+    title: "FINN.no \u2014 Depois de enviar",
+    color: "#6D28D9",
+    tier: 1,
+    grammar: {
+      title: "Passado de '\xE5 f\xE5' (receber)",
+      text: "'Fikk' \xE9 o passado irregular de '\xE5 f\xE5' (receber / conseguir): 'jeg fikk et tilbud' (recebi uma oferta)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "svar"?', options: ["Resposta", "Recusa", "Oferta", "Data de in\xEDcio"], answer: "Resposta", audio: "Svar" },
+      { type: "mc", prompt: 'O que significa "avslag"?', options: ["Recusa", "Resposta", "Oferta", "Data de in\xEDcio"], answer: "Recusa", audio: "Avslag" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "tilbud", audio: "Tilbud", pt: "Oferta" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu recebi uma oferta de emprego"', answer: "Jeg fikk et jobbtilbud", audio: "Jeg fikk et jobbtilbud", pt: "Eu recebi uma oferta de emprego" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "svar", pt: "Resposta" }, { no: "avslag", pt: "Recusa" }, { no: "tilbud", pt: "Oferta" }] }
+    ]
+  },
+  {
+    id: "verbs",
+    title: "Verbos comuns",
+    color: "#7C3AED",
+    tier: 1,
+    grammar: {
+      title: "Verbos no infinitivo",
+      text: "Verbos no infinitivo come\xE7am com '\xE5': '\xE5 spise' (comer), '\xE5 g\xE5' (andar/ir). No presente, a maioria termina em '-r': 'jeg spiser' (eu como)."
+    },
+    items: [
+      { type: "mc", prompt: "'\xC5 spise' significa:", options: ["Comer", "Beber", "Dormir", "Andar"], answer: "Comer", audio: "\xC5 spise" },
+      { type: "mc", prompt: "'\xC5 sove' significa:", options: ["Dormir", "Comer", "Trabalhar", "Correr"], answer: "Dormir", audio: "\xC5 sove" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "\xE5 g\xE5", audio: "\xC5 g\xE5", pt: "Andar / ir" },
+      { type: "arrange", prompt: "Monte a frase: 'Eu trabalho muito'", answer: "Jeg jobber mye", audio: "Jeg jobber mye" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "spise", pt: "Comer" }, { no: "sove", pt: "Dormir" }, { no: "g\xE5", pt: "Andar" }] }
+    ]
+  },
+  {
+    id: "station",
+    title: "Na esta\xE7\xE3o de trem",
+    color: "#4D7C0F",
+    tier: 1,
+    grammar: {
+      title: "Definido com sufixo '-et'",
+      text: "'Toget' (o comboio) usa o sufixo '-et' para tornar 'tog' (neutro) definido \u2014 equivalente a acrescentar 'o/a' em portugu\xEAs."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'tog'?", options: ["Comboio", "Carro", "Avi\xE3o", "Barco"], answer: "Comboio", audio: "Tog" },
+      { type: "mc", prompt: "'Forsinket' significa:", options: ["Atrasado", "R\xE1pido", "Cedo", "Cancelado"], answer: "Atrasado", audio: "Forsinket" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "bagasje", audio: "Bagasje", pt: "Bagagem" },
+      { type: "arrange", prompt: "Monte a frase: 'O comboio est\xE1 atrasado'", answer: "Toget er forsinket", audio: "Toget er forsinket" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "tog", pt: "Comboio" }, { no: "bagasje", pt: "Bagagem" }, { no: "klokke", pt: "Rel\xF3gio" }] }
+    ]
+  },
+  {
+    id: "nature",
+    title: "Natureza",
+    color: "#15803D",
+    tier: 1,
+    grammar: {
+      title: "'\xC5 g\xE5 en tur' (dar um passeio)",
+      text: "'G\xE5 en tur' \xE9 uma express\xE3o fixa para 'dar um passeio / caminhada', muito comum no dia a dia noruegu\xEAs."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "skog"?', options: ["Floresta", "Montanha", "Mar / lago", "Animal"], answer: "Floresta", audio: "Skog" },
+      { type: "mc", prompt: 'O que significa "fjell"?', options: ["Montanha", "Floresta", "Mar / lago", "Animal"], answer: "Montanha", audio: "Fjell" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "sj\xF8", audio: "Sj\xF8", pt: "Mar / lago" },
+      { type: "arrange", prompt: 'Monte a frase: "Vamos dar um passeio na floresta"', answer: "Vi g\xE5r en tur i skogen", audio: "Vi g\xE5r en tur i skogen", pt: "Vamos dar um passeio na floresta" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "skog", pt: "Floresta" }, { no: "fjell", pt: "Montanha" }, { no: "sj\xF8", pt: "Mar / lago" }] }
+    ]
+  },
+  {
+    id: "body",
+    title: "Corpo",
+    color: "#DB2777",
+    tier: 1,
+    grammar: {
+      title: "Partes do corpo com sufixo definido",
+      text: "Para dizer 'a cabe\xE7a' (algo espec\xEDfico), usa-se o sufixo '-et': 'hodet' (a cabe\xE7a). Sem sufixo, 'hode' significa apenas 'cabe\xE7a'."
+    },
+    items: [
+      { type: "mc", prompt: "O que significa 'hode'?", options: ["Cabe\xE7a", "M\xE3o", "P\xE9", "Olho"], answer: "Cabe\xE7a", audio: "Hode" },
+      { type: "mc", prompt: "'H\xE5nd' significa:", options: ["M\xE3o", "P\xE9", "Bra\xE7o", "Perna"], answer: "M\xE3o", audio: "H\xE5nd" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "\xF8ye", audio: "\xD8ye", pt: "Olho" },
+      { type: "arrange", prompt: "Monte a frase: 'Eu tenho dor de cabe\xE7a'", answer: "Jeg har vondt i hodet", audio: "Jeg har vondt i hodet" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "hode", pt: "Cabe\xE7a" }, { no: "h\xE5nd", pt: "M\xE3o" }, { no: "\xF8ye", pt: "Olho" }] }
+    ]
+  },
+  {
+    id: "finn-regions",
+    title: "FINN.no \u2014 Regi\xF5es",
+    color: "#7C2D92",
+    tier: 1,
+    grammar: {
+      title: "Lugares sem artigo",
+      text: "Nomes de fylker (regi\xF5es) e pa\xEDses usam-se sem artigo depois de 'i' (em): 'i Oslo', 'i Rogaland', 'i Norge'."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "omr\xE5de"?', options: ["\xC1rea / regi\xE3o", "Cidade", "Pa\xEDs", "Rua"], answer: "\xC1rea / regi\xE3o", audio: "Omr\xE5de" },
+      { type: "mc", prompt: '"Utlandet" significa:', options: ["Estrangeiro", "Pa\xEDs", "Cidade", "Vizinhan\xE7a"], answer: "Estrangeiro", audio: "Utlandet" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "norge", audio: "Norge", pt: "Noruega" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu moro em Oslo"', answer: "Jeg bor i Oslo", audio: "Jeg bor i Oslo", pt: "Eu moro em Oslo" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "omr\xE5de", pt: "\xC1rea" }, { no: "utlandet", pt: "Estrangeiro" }, { no: "norge", pt: "Noruega" }] }
+    ]
+  },
+  {
+    id: "finn-time",
+    title: "FINN.no \u2014 Tempo e prazos",
+    color: "#A16207",
+    tier: 1,
+    grammar: {
+      title: "'Siden' (atr\xE1s / desde)",
+      text: "'Siden' depois de um n\xFAmero de dias significa 'atr\xE1s': '17 dager siden' (h\xE1 17 dias)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "ny i dag"?', options: ["Novo hoje", "Antigo", "Fechado", "Urgente"], answer: "Novo hoje", audio: "Ny i dag" },
+      { type: "mc", prompt: '"Dager siden" significa:', options: ["Dias atr\xE1s", "Dias \xE0 frente", "Todos os dias", "Hoje"], answer: "Dias atr\xE1s", audio: "Dager siden" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "frist", audio: "Frist", pt: "Prazo" },
+      { type: "arrange", prompt: 'Monte a frase: "O prazo \xE9 amanh\xE3"', answer: "Fristen er i morgen", audio: "Fristen er i morgen", pt: "O prazo \xE9 amanh\xE3" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "frist", pt: "Prazo" }, { no: "ny", pt: "Novo" }, { no: "dager", pt: "Dias" }] }
+    ]
+  },
+  {
+    id: "school",
+    title: "Escola",
+    color: "#1D4ED8",
+    tier: 1,
+    grammar: {
+      title: "'I morgen' (amanh\xE3)",
+      text: "'I morgen' significa 'amanh\xE3' \u2014 n\xE3o confundir com 'morgen' sozinho, que significa 'manh\xE3'."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "skole"?', options: ["Escola", "Aluno(a)", "Trabalho de casa", "Exame"], answer: "Escola", audio: "Skole" },
+      { type: "mc", prompt: 'O que significa "elev"?', options: ["Aluno(a)", "Escola", "Trabalho de casa", "Exame"], answer: "Aluno(a)", audio: "Elev" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "lekse", audio: "Lekse", pt: "Trabalho de casa" },
+      { type: "arrange", prompt: 'Monte a frase: "Tenho exame amanh\xE3"', answer: "Jeg har eksamen i morgen", audio: "Jeg har eksamen i morgen", pt: "Tenho exame amanh\xE3" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "skole", pt: "Escola" }, { no: "elev", pt: "Aluno(a)" }, { no: "lekse", pt: "Trabalho de casa" }] }
+    ]
+  },
+  {
+    id: "bank",
+    title: "Dinheiro e banco",
+    color: "#92400E",
+    tier: 1,
+    grammar: {
+      title: "'Regning' (conta / fatura)",
+      text: "'Regning' significa 'conta / fatura' (a pagar), diferente de 'konto', que \xE9 'conta banc\xE1ria'."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "bank"?', options: ["Banco", "Conta banc\xE1ria", "Dinheiro", "Pagar"], answer: "Banco", audio: "Bank" },
+      { type: "mc", prompt: 'O que significa "konto"?', options: ["Conta banc\xE1ria", "Banco", "Dinheiro", "Pagar"], answer: "Conta banc\xE1ria", audio: "Konto" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "penger", audio: "Penger", pt: "Dinheiro" },
+      { type: "arrange", prompt: 'Monte a frase: "Tenho de pagar a conta"', answer: "Jeg m\xE5 betale regningen", audio: "Jeg m\xE5 betale regningen", pt: "Tenho de pagar a conta" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "bank", pt: "Banco" }, { no: "konto", pt: "Conta banc\xE1ria" }, { no: "penger", pt: "Dinheiro" }] }
+    ]
+  },
+  {
+    id: "finn-industries",
+    title: "FINN.no \u2014 Setores",
+    color: "#C2410C",
+    tier: 1,
+    grammar: {
+      title: "'Og' para ligar categorias",
+      text: "'Og' (e) liga duas palavras: 'helse og omsorg' (sa\xFAde e cuidados), 'salg og kundeservice' (vendas e atendimento ao cliente)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "helse"?', options: ["Sa\xFAde", "Educa\xE7\xE3o", "Seguran\xE7a", "Transporte"], answer: "Sa\xFAde", audio: "Helse" },
+      { type: "mc", prompt: '"Omsorg" significa:', options: ["Cuidado", "Trabalho", "Dinheiro", "Tempo"], answer: "Cuidado", audio: "Omsorg" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "kundeservice", audio: "Kundeservice", pt: "Atendimento ao cliente" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu trabalho na \xE1rea da sa\xFAde"', answer: "Jeg jobber innen helse", audio: "Jeg jobber innen helse", pt: "Eu trabalho na \xE1rea da sa\xFAde" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "helse", pt: "Sa\xFAde" }, { no: "omsorg", pt: "Cuidado" }, { no: "kundeservice", pt: "Atendimento ao cliente" }] }
+    ]
+  },
+  {
+    id: "finn-jobs1",
+    title: "FINN.no \u2014 Profiss\xF5es I",
+    color: "#B45309",
+    tier: 1,
+    grammar: {
+      title: "Sufixo '-er' para profiss\xF5es",
+      text: "Muitas profiss\xF5es terminam em '-er': 'selger' (vendedor), 'l\xE6rer' (professor), 'mekaniker' (mec\xE2nico) \u2014 do verbo + '-er' (quem faz a a\xE7\xE3o)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "selger"?', options: ["Vendedor", "Comprador", "Gerente", "Cliente"], answer: "Vendedor", audio: "Selger" },
+      { type: "mc", prompt: '"Sykepleier" significa:', options: ["Enfermeiro(a)", "M\xE9dico", "Professor", "Motorista"], answer: "Enfermeiro(a)", audio: "Sykepleier" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "l\xE6rer", audio: "L\xE6rer", pt: "Professor" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu sou mec\xE2nico"', answer: "Jeg er mekaniker", audio: "Jeg er mekaniker", pt: "Eu sou mec\xE2nico" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "selger", pt: "Vendedor" }, { no: "sykepleier", pt: "Enfermeiro(a)" }, { no: "l\xE6rer", pt: "Professor" }] }
+    ]
+  },
+  {
+    id: "finn-filters",
+    title: "FINN.no \u2014 Filtros",
+    color: "#0284C7",
+    tier: 1,
+    grammar: {
+      title: "Palavras compostas",
+      text: "O noruegu\xEAs forma palavras longas juntando substantivos, sem espa\xE7o: 's\xF8knadsfrist' (s\xF8knad + frist = prazo de candidatura). Isso \xE9 muito comum em an\xFAncios de emprego."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "stilling"?', options: ["Vaga / cargo", "Empresa", "Sal\xE1rio", "Curr\xEDculo"], answer: "Vaga / cargo", audio: "Stilling" },
+      { type: "mc", prompt: '"Bransje" significa:', options: ["Setor / ind\xFAstria", "Bairro", "Contrato", "Curr\xEDculo"], answer: "Setor / ind\xFAstria", audio: "Bransje" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "sted", audio: "Sted", pt: "Local" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu quero trabalhar a tempo inteiro"', answer: "Jeg vil jobbe heltid", audio: "Jeg vil jobbe heltid", pt: "Eu quero trabalhar a tempo inteiro" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "stilling", pt: "Vaga / cargo" }, { no: "bransje", pt: "Setor" }, { no: "heltid", pt: "Tempo inteiro" }] }
+    ]
+  },
+  {
+    id: "finn-navigation",
+    title: "FINN.no \u2014 Navega\xE7\xE3o",
+    color: "#57534E",
+    tier: 1,
+    grammar: {
+      title: "Plural em '-er'",
+      text: "Muitos substantivos formam o plural com '-er': 'resultat' \u2192 'resultater' (resultados), 'stilling' \u2192 'stillinger' (vagas)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "side"?', options: ["P\xE1gina", "Lado", "Site", "An\xFAncio"], answer: "P\xE1gina", audio: "Side" },
+      { type: "mc", prompt: '"Neste side" significa:', options: ["Pr\xF3xima p\xE1gina", "P\xE1gina anterior", "\xDAltima p\xE1gina", "Primeira p\xE1gina"], answer: "Pr\xF3xima p\xE1gina", audio: "Neste side" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "resultater", audio: "Resultater", pt: "Resultados" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu vejo 27 resultados"', answer: "Jeg ser 27 resultater", audio: "Jeg ser 27 resultater", pt: "Eu vejo 27 resultados" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "side", pt: "P\xE1gina" }, { no: "resultat", pt: "Resultado" }, { no: "s\xF8k", pt: "Busca" }] }
+    ]
+  },
+  {
+    id: "intro",
+    title: "Apresenta\xE7\xF5es",
+    color: "#378ADD",
+    tier: 1,
+    grammar: {
+      title: "Verbo '\xE5 hete' (chamar-se)",
+      text: "'Jeg heter...' significa 'Eu me chamo...'. O verbo '\xE5 hete' n\xE3o muda de forma com a pessoa \u2014 \xE9 sempre 'heter'."
+    },
+    items: [
+      { type: "mc", prompt: "'Jeg heter Anna' significa:", options: ["Eu moro em Anna", "Eu me chamo Anna", "Eu gosto de Anna", "Eu conhe\xE7o Anna"], answer: "Eu me chamo Anna", audio: "Jeg heter Anna" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "jeg heter", audio: "Jeg heter", pt: "Eu me chamo" },
+      { type: "mc", prompt: "Como se pergunta 'Como voc\xEA se chama?'", options: ["Hva heter du?", "Hvor bor du?", "Hvordan har du det?", "Hvem er du?"], answer: "Hva heter du?", audio: "Hva heter du?" },
+      { type: "mc", prompt: "'Hvor kommer du fra?' significa:", options: ["Onde voc\xEA mora?", "De onde voc\xEA \xE9?", "Quantos anos voc\xEA tem?", "Como vai?"], answer: "De onde voc\xEA \xE9?", audio: "Hvor kommer du fra?" },
+      { type: "translate", prompt: "Traduza: 'Eu sou do Brasil'", answer: "jeg er fra brasil", audio: "Jeg er fra Brasil" }
+    ]
+  },
+  {
+    id: "technology",
+    title: "Tecnologia",
+    color: "#4C1D95",
+    tier: 1,
+    grammar: {
+      title: "Verbo '\xE5 m\xE5tte' (dever / ter de)",
+      text: "'M\xE5' \xE9 o presente de '\xE5 m\xE5tte' (ter de / dever): 'jeg m\xE5 lade telefonen' (tenho de carregar o telem\xF3vel)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "telefon"?', options: ["Telem\xF3vel", "Palavra-passe", "Internet", "Carregar (bateria)"], answer: "Telem\xF3vel", audio: "Telefon" },
+      { type: "mc", prompt: 'O que significa "passord"?', options: ["Palavra-passe", "Telem\xF3vel", "Internet", "Carregar (bateria)"], answer: "Palavra-passe", audio: "Passord" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "internett", audio: "Internett", pt: "Internet" },
+      { type: "arrange", prompt: 'Monte a frase: "Tenho de carregar o telem\xF3vel"', answer: "Jeg m\xE5 lade telefonen", audio: "Jeg m\xE5 lade telefonen", pt: "Tenho de carregar o telem\xF3vel" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "telefon", pt: "Telem\xF3vel" }, { no: "passord", pt: "Palavra-passe" }, { no: "internett", pt: "Internet" }] }
+    ]
+  },
+  {
+    id: "finn-contract",
+    title: "FINN.no \u2014 Tipos de contrato",
+    color: "#3F6212",
+    tier: 1,
+    grammar: {
+      title: "Adjetivos antes do substantivo",
+      text: "Adjetivos v\xEAm antes do substantivo, como em portugu\xEAs: 'en fast jobb' (um emprego fixo)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "fast"?', options: ["Fixo / permanente", "Tempor\xE1rio", "Substituto / tempor\xE1rio", "Per\xEDodo experimental"], answer: "Fixo / permanente", audio: "Fast" },
+      { type: "mc", prompt: 'O que significa "midlertidig"?', options: ["Tempor\xE1rio", "Fixo / permanente", "Substituto / tempor\xE1rio", "Per\xEDodo experimental"], answer: "Tempor\xE1rio", audio: "Midlertidig" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "vikar", audio: "Vikar", pt: "Substituto / tempor\xE1rio" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu tenho um emprego fixo"', answer: "Jeg har en fast jobb", audio: "Jeg har en fast jobb", pt: "Eu tenho um emprego fixo" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "fast", pt: "Fixo / permanente" }, { no: "midlertidig", pt: "Tempor\xE1rio" }, { no: "vikar", pt: "Substituto / tempor\xE1rio" }] }
+    ]
+  },
+  {
+    id: "finn-cv",
+    title: "FINN.no \u2014 CV",
+    color: "#1E3A8A",
+    tier: 1,
+    grammar: {
+      title: "Verbo '\xE5 legge ved' (anexar)",
+      text: "'Legge ved' significa 'anexar': 'jeg legger ved CV-en min' (anexo o meu curr\xEDculo)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "cv"?', options: ["Curr\xEDculo", "Diploma / certificado", "Certificados / refer\xEAncias", "Refer\xEAncias"], answer: "Curr\xEDculo", audio: "Cv" },
+      { type: "mc", prompt: 'O que significa "vitnem\xE5l"?', options: ["Diploma / certificado", "Curr\xEDculo", "Certificados / refer\xEAncias", "Refer\xEAncias"], answer: "Diploma / certificado", audio: "Vitnem\xE5l" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "attester", audio: "Attester", pt: "Certificados / refer\xEAncias" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu anexo o meu curr\xEDculo"', answer: "Jeg legger ved CV-en min", audio: "Jeg legger ved CV-en min", pt: "Eu anexo o meu curr\xEDculo" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "cv", pt: "Curr\xEDculo" }, { no: "vitnem\xE5l", pt: "Diploma / certificado" }, { no: "attester", pt: "Certificados / refer\xEAncias" }] }
+    ]
+  },
+  {
+    id: "finn-jobs3",
+    title: "FINN.no \u2014 Profiss\xF5es III",
+    color: "#0F766E",
+    tier: 1,
+    grammar: {
+      title: "'Vakt' (turno / guarda)",
+      text: "'Vakt' significa 'turno' ou 'guarda': 'nattevakt' (turno da noite), 'dagvakt' (turno do dia)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "barnehagel\xE6rer"?', options: ["Educador(a) de inf\xE2ncia", "Professor do secund\xE1rio", "Diretor de escola", "Ama"], answer: "Educador(a) de inf\xE2ncia", audio: "Barnehagel\xE6rer" },
+      { type: "mc", prompt: '"Nattevakt" significa:', options: ["Turno da noite", "Turno da manh\xE3", "Seguran\xE7a", "Recepcionista"], answer: "Turno da noite", audio: "Nattevakt" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "fysioterapeut", audio: "Fysioterapeut", pt: "Fisioterapeuta" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu trabalho por turnos"', answer: "Jeg jobber turnus", audio: "Jeg jobber turnus", pt: "Eu trabalho por turnos" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "barnehagel\xE6rer", pt: "Educador(a) de inf\xE2ncia" }, { no: "nattevakt", pt: "Turno da noite" }, { no: "fysioterapeut", pt: "Fisioterapeuta" }] }
+    ]
+  },
+  {
+    id: "finn-phrases",
+    title: "FINN.no \u2014 Frases dos an\xFAncios",
+    color: "#0891B2",
+    tier: 1,
+    grammar: {
+      title: "'Vi s\xF8ker' (procuramos)",
+      text: "An\xFAncios de emprego costumam come\xE7ar com 'Vi s\xF8ker...' (Procuramos...) seguido do cargo: 'Vi s\xF8ker en selger' (Procuramos um vendedor)."
+    },
+    items: [
+      { type: "mc", prompt: '"Vi s\xF8ker" significa:', options: ["Procuramos", "Oferecemos", "Pagamos", "Contratamos j\xE1"], answer: "Procuramos", audio: "Vi s\xF8ker" },
+      { type: "mc", prompt: '"Bli med i teamet v\xE5rt" significa:', options: ["Junte-se \xE0 nossa equipa", "Saia da equipa", "Lidere a equipa", "Conhe\xE7a a equipa"], answer: "Junte-se \xE0 nossa equipa", audio: "Bli med i teamet v\xE5rt" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "fast stilling", audio: "Fast stilling", pt: "Vaga fixa" },
+      { type: "arrange", prompt: 'Monte a frase: "Procuramos um novo colega"', answer: "Vi s\xF8ker en ny kollega", audio: "Vi s\xF8ker en ny kollega", pt: "Procuramos um novo colega" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "kollega", pt: "Colega" }, { no: "team", pt: "Equipa" }, { no: "fast", pt: "Fixo" }] }
+    ]
+  },
+  {
+    id: "finn-requirements",
+    title: "FINN.no \u2014 Requisitos",
+    color: "#854D0E",
+    tier: 1,
+    grammar: {
+      title: "'\xC5 ha' (ter)",
+      text: "'Har' (tem) \xE9 usado para descrever posses e qualifica\xE7\xF5es: 'jeg har f\xF8rerkort' (tenho carta de condu\xE7\xE3o)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "krav"?', options: ["Requisito", "Experi\xEAncia", "Carta de condu\xE7\xE3o", "Compet\xEAncia"], answer: "Requisito", audio: "Krav" },
+      { type: "mc", prompt: 'O que significa "erfaring"?', options: ["Experi\xEAncia", "Requisito", "Carta de condu\xE7\xE3o", "Compet\xEAncia"], answer: "Experi\xEAncia", audio: "Erfaring" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "f\xF8rerkort", audio: "F\xF8rerkort", pt: "Carta de condu\xE7\xE3o" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu tenho carta de condu\xE7\xE3o"', answer: "Jeg har f\xF8rerkort", audio: "Jeg har f\xF8rerkort", pt: "Eu tenho carta de condu\xE7\xE3o" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "krav", pt: "Requisito" }, { no: "erfaring", pt: "Experi\xEAncia" }, { no: "f\xF8rerkort", pt: "Carta de condu\xE7\xE3o" }] }
+    ]
+  },
+  {
+    id: "daily",
+    title: "Dia a dia",
+    color: "#D85A30",
+    tier: 1,
+    grammar: {
+      title: "Ordem das palavras",
+      text: "Frases afirmativas simples seguem Sujeito-Verbo-Objeto, igual portugu\xEAs: 'Jeg drikker kaffe' = 'Eu bebo caf\xE9'. Em perguntas, o verbo vem antes do sujeito."
+    },
+    items: [
+      { type: "mc", prompt: "'Jeg drikker kaffe' significa:", options: ["Eu bebo \xE1gua", "Eu bebo caf\xE9", "Eu como p\xE3o", "Eu quero ch\xE1"], answer: "Eu bebo caf\xE9", audio: "Jeg drikker kaffe" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "jeg vil ha", audio: "Jeg vil ha", pt: "Eu quero" },
+      { type: "mc", prompt: "Como se diz 'quanto custa?'", options: ["Hvor mye koster det?", "Hva klokka er?", "Hvor er det?", "Hvem er det?"], answer: "Hvor mye koster det?", audio: "Hvor mye koster det?" },
+      { type: "mc", prompt: "'Unnskyld meg' significa:", options: ["Com licen\xE7a / desculpe", "Bom apetite", "At\xE9 amanh\xE3", "N\xE3o entendi"], answer: "Com licen\xE7a / desculpe", audio: "Unnskyld meg" },
+      { type: "arrange", prompt: "Monte a frase: 'Eu quero caf\xE9'", answer: "Jeg vil ha kaffe", audio: "Jeg vil ha kaffe" }
+    ]
+  },
+  {
+    id: "finn-actions",
+    title: "FINN.no \u2014 No site",
+    color: "#BE123C",
+    tier: 1,
+    grammar: {
+      title: "Imperativo em bot\xF5es",
+      text: "'Legg til' (adicionar) e 's\xF8k' (procurar) s\xE3o imperativos \u2014 o verbo sozinho, sem sujeito, t\xEDpico de instru\xE7\xF5es de bot\xE3o."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "legg til som favoritt"?', options: ["Adicionar aos favoritos", "Remover an\xFAncio", "Enviar candidatura", "Ver perfil"], answer: "Adicionar aos favoritos", audio: "Legg til som favoritt" },
+      { type: "mc", prompt: '"Enkel s\xF8knad" significa:', options: ["Candidatura simples", "Candidatura recusada", "Vaga fechada", "Entrevista marcada"], answer: "Candidatura simples", audio: "Enkel s\xF8knad" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "vis p\xE5 kart", audio: "Vis p\xE5 kart", pt: "Ver no mapa" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu procuro por trabalho"', answer: "Jeg s\xF8ker etter jobb", audio: "Jeg s\xF8ker etter jobb", pt: "Eu procuro por trabalho" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "s\xF8k", pt: "Procurar" }, { no: "favoritt", pt: "Favorito" }, { no: "s\xF8knad", pt: "Candidatura" }] }
+    ]
+  },
+  {
+    id: "finn-jobs2",
+    title: "FINN.no \u2014 Profiss\xF5es II",
+    color: "#166534",
+    tier: 1,
+    grammar: {
+      title: "Palavras compostas em cargos",
+      text: "Cargos costumam combinar \xE1rea + fun\xE7\xE3o: 'butikksjef' (butikk + sjef = chefe de loja), 'regnskapsmedarbeider' (regnskap + medarbeider = colaborador de contabilidade)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "butikksjef"?', options: ["Chefe de loja", "Vendedor", "Cliente", "Seguran\xE7a"], answer: "Chefe de loja", audio: "Butikksjef" },
+      { type: "mc", prompt: '"Regnskapsmedarbeider" significa:', options: ["Contabilista", "Advogado", "Gestor", "Recepcionista"], answer: "Contabilista", audio: "Regnskapsmedarbeider" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "operat\xF8r", audio: "Operat\xF8r", pt: "Operador" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu trabalho como vendedor"', answer: "Jeg jobber som selger", audio: "Jeg jobber som selger", pt: "Eu trabalho como vendedor" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "butikksjef", pt: "Chefe de loja" }, { no: "regnskapsmedarbeider", pt: "Contabilista" }, { no: "operat\xF8r", pt: "Operador" }] }
+    ]
+  },
+  {
+    id: "finn-application2",
+    title: "FINN.no \u2014 Candidatura II",
+    color: "#9F1239",
+    tier: 1,
+    grammar: {
+      title: "Substantivos compostos com 's\xF8knad'",
+      text: "'S\xF8knad' (candidatura) combina-se com outras palavras: 'jobbs\xF8knad' (candidatura de emprego)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "jobbs\xF8knad"?', options: ["Candidatura de emprego", "Motiva\xE7\xE3o", "An\xFAncio de vaga", "Requisitos de qualifica\xE7\xE3o"], answer: "Candidatura de emprego", audio: "Jobbs\xF8knad" },
+      { type: "mc", prompt: 'O que significa "motivasjon"?', options: ["Motiva\xE7\xE3o", "Candidatura de emprego", "An\xFAncio de vaga", "Requisitos de qualifica\xE7\xE3o"], answer: "Motiva\xE7\xE3o", audio: "Motivasjon" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "utlysning", audio: "Utlysning", pt: "An\xFAncio de vaga" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu escrevo uma candidatura"', answer: "Jeg skriver en s\xF8knad", audio: "Jeg skriver en s\xF8knad", pt: "Eu escrevo uma candidatura" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "jobbs\xF8knad", pt: "Candidatura de emprego" }, { no: "motivasjon", pt: "Motiva\xE7\xE3o" }, { no: "utlysning", pt: "An\xFAncio de vaga" }] }
+    ]
+  },
+  {
+    id: "restaurant",
+    title: "No restaurante",
+    color: "#639922",
+    tier: 1,
+    grammar: {
+      title: "Pedidos educados",
+      text: "'Jeg vil gjerne...' (Eu gostaria de...) \xE9 a forma educada de pedir algo \u2014 mais formal do que 'jeg vil ha' (eu quero)."
+    },
+    items: [
+      { type: "mc", prompt: "'Jeg vil gjerne bestille' significa:", options: ["Eu gostaria de pedir", "Eu quero pagar", "Eu gostaria de sair", "Eu quero uma mesa"], answer: "Eu gostaria de pedir", audio: "Jeg vil gjerne bestille" },
+      { type: "translate", prompt: "Traduza: 'a conta, por favor'", answer: "regningen takk", audio: "Regningen, takk" },
+      { type: "mc", prompt: "'Smaker det godt?' significa:", options: ["Est\xE1 com bom sabor?", "Quanto custa?", "Est\xE1 pronto?", "Voc\xEA gosta?"], answer: "Est\xE1 com bom sabor?", audio: "Smaker det godt?" },
+      { type: "mc", prompt: "Como se pede 'uma \xE1gua, por favor'?", options: ["Et vann, takk", "En vann, takk", "Vann, v\xE6r s\xE5 snill takk", "To vann, takk"], answer: "Et vann, takk", audio: "Et vann, takk" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "det er godt", audio: "Det er godt", pt: "Est\xE1 delicioso" }
+    ]
+  },
+  {
+    id: "finn-apply",
+    title: "FINN.no \u2014 Candidatura",
+    color: "#0369A1",
+    tier: 1,
+    grammar: {
+      title: "Substantivos definidos + posse",
+      text: "'S\xF8knaden min' (a minha candidatura) usa o sufixo '-en' para tornar 's\xF8knad' definido, e 'min' (meu/minha) vem depois do substantivo \u2014 ao contr\xE1rio do portugu\xEAs."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "s\xF8knad"?', options: ["Candidatura", "Entrevista", "Contrato", "Curr\xEDculo"], answer: "Candidatura", audio: "S\xF8knad" },
+      { type: "mc", prompt: '"Arbeidsgiver" significa:', options: ["Empregador", "Empregado", "Colega", "Gestor"], answer: "Empregador", audio: "Arbeidsgiver" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "s\xF8knadsfrist", audio: "S\xF8knadsfrist", pt: "Prazo de candidatura" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu envio a minha candidatura hoje"', answer: "Jeg sender s\xF8knaden min i dag", audio: "Jeg sender s\xF8knaden min i dag", pt: "Eu envio a minha candidatura hoje" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "s\xF8knad", pt: "Candidatura" }, { no: "arbeidsgiver", pt: "Empregador" }, { no: "erfaring", pt: "Experi\xEAncia" }] }
+    ]
+  },
+  {
+    id: "finn-filters2",
+    title: "FINN.no \u2014 Mais filtros",
+    color: "#4338CA",
+    tier: 1,
+    grammar: {
+      title: "Adv\xE9rbios de tempo em an\xFAncios",
+      text: "'Publisert' (publicado) e 'ny i dag' (novo hoje) ajudam a saber h\xE1 quanto tempo a vaga est\xE1 aberta."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "publisert"?', options: ["Publicado", "Fechado", "Pago", "Urgente"], answer: "Publicado", audio: "Publisert" },
+      { type: "mc", prompt: '"Hjemmekontor" significa:', options: ["Home office", "Escrit\xF3rio central", "F\xE1brica", "Armaz\xE9m"], answer: "Home office", audio: "Hjemmekontor" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "sektor", audio: "Sektor", pt: "Setor" },
+      { type: "arrange", prompt: 'Monte a frase: "A vaga foi publicada hoje"', answer: "Stillingen ble publisert i dag", audio: "Stillingen ble publisert i dag", pt: "A vaga foi publicada hoje" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "publisert", pt: "Publicado" }, { no: "sektor", pt: "Setor" }, { no: "hjemmekontor", pt: "Home office" }] }
+    ]
+  },
+  {
+    id: "finn-sort",
+    title: "FINN.no \u2014 Ordenar resultados",
+    color: "#65A30D",
+    tier: 1,
+    grammar: {
+      title: "Superlativo com '-est'",
+      text: "'N\xE6rmest' (mais pr\xF3ximo) e 'tidligst' (mais cedo) terminam em '-est', o superlativo em noruegu\xEAs, equivalente a 'mais X'."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "n\xE6rmest"?', options: ["Mais pr\xF3ximo", "Mais longe", "Mais caro", "Mais recente"], answer: "Mais pr\xF3ximo", audio: "N\xE6rmest" },
+      { type: "mc", prompt: '"Sorter p\xE5" significa:', options: ["Ordenar por", "Filtrar por", "Procurar por", "Pagar por"], answer: "Ordenar por", audio: "Sorter p\xE5" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "mest relevant", audio: "Mest relevant", pt: "Mais relevante" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu ordeno por mais relevante"', answer: "Jeg sorterer p\xE5 mest relevant", audio: "Jeg sorterer p\xE5 mest relevant", pt: "Eu ordeno por mais relevante" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "n\xE6rmest", pt: "Mais pr\xF3ximo" }, { no: "tidligst", pt: "Mais cedo" }, { no: "relevant", pt: "Relevante" }] }
+    ]
+  },
+  {
+    id: "finn-jobs4",
+    title: "FINN.no \u2014 Profiss\xF5es IV",
+    color: "#9D174D",
+    tier: 1,
+    grammar: {
+      title: "Sufixo '-ansvarlig' (respons\xE1vel por)",
+      text: "'-ansvarlig' no fim de uma palavra significa 'respons\xE1vel por': 'distriktsansvarlig' (respons\xE1vel distrital), 'forbedringsansvarlig' (respons\xE1vel por melhorias)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "bedriftsr\xE5dgiver"?', options: ["Consultor empresarial", "Contabilista", "Diretor executivo", "Advogado"], answer: "Consultor empresarial", audio: "Bedriftsr\xE5dgiver" },
+      { type: "mc", prompt: '"Distriktsansvarlig" significa:', options: ["Respons\xE1vel distrital", "Vendedor local", "Motorista", "Seguran\xE7a"], answer: "Respons\xE1vel distrital", audio: "Distriktsansvarlig" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "gulvlegger", audio: "Gulvlegger", pt: "Colocador de pavimentos" },
+      { type: "arrange", prompt: 'Monte a frase: "Eu sou respons\xE1vel pela equipa"', answer: "Jeg er ansvarlig for teamet", audio: "Jeg er ansvarlig for teamet", pt: "Eu sou respons\xE1vel pela equipa" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "bedriftsr\xE5dgiver", pt: "Consultor empresarial" }, { no: "gulvlegger", pt: "Colocador de pavimentos" }, { no: "psykolog", pt: "Psic\xF3logo(a)" }] }
+    ]
+  },
+  {
+    id: "finn-interview",
+    title: "FINN.no \u2014 Entrevista",
+    color: "#155E75",
+    tier: 1,
+    grammar: {
+      title: "Adjetivo 'forberedt'",
+      text: "'Forberedt' (preparado) vem do verbo '\xE5 forberede' (preparar) mais o sufixo '-t', comum em partic\xEDpios passados."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "intervju"?', options: ["Entrevista", "Preparado", "Pergunta", "Responder"], answer: "Entrevista", audio: "Intervju" },
+      { type: "mc", prompt: 'O que significa "forberedt"?', options: ["Preparado", "Entrevista", "Pergunta", "Responder"], answer: "Preparado", audio: "Forberedt" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "sp\xF8rsm\xE5l", audio: "Sp\xF8rsm\xE5l", pt: "Pergunta" },
+      { type: "arrange", prompt: 'Monte a frase: "Estou preparado para a entrevista"', answer: "Jeg er forberedt til intervjuet", audio: "Jeg er forberedt til intervjuet", pt: "Estou preparado para a entrevista" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "intervju", pt: "Entrevista" }, { no: "forberedt", pt: "Preparado" }, { no: "sp\xF8rsm\xE5l", pt: "Pergunta" }] }
+    ]
+  },
+  {
+    id: "beg-10",
+    title: "Iniciante \u2014 parte 10",
+    color: "#14B8A6",
+    tier: 1,
+    grammar: {
+      title: "Perguntas com invers\xE3o",
+      text: "Em perguntas, o verbo vem antes do sujeito: 'er du redd?' (est\xE1s com medo?), ao inv\xE9s de 'du er redd' (afirma\xE7\xE3o)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "ja jeg kjenner bakken n\xE5"?', options: ["Sim, sinto o ch\xE3o agora.", "Uma l\xE2mpada e uma porta.", "Agora est\xE1s a usar os teus sentidos.", "Este exerc\xEDcio \xE9 muito \xFAtil."], answer: "Sim, sinto o ch\xE3o agora.", audio: "Ja jeg kjenner bakken n\xE5" },
+      { type: "translate", prompt: 'Traduza: "Uma l\xE2mpada e uma porta."', answer: "en lampe og en d\xF8r", audio: "En lampe og en d\xF8r" },
+      { type: "arrange", prompt: 'Monte a frase: "Agora est\xE1s a usar os teus sentidos."', answer: "N\xE5 bruker du sansene dine", audio: "N\xE5 bruker du sansene dine", pt: "Agora est\xE1s a usar os teus sentidos." },
+      { type: "mc", prompt: 'O que significa "denne \xF8velsen er veldig nyttig"?', options: ["Este exerc\xEDcio \xE9 muito \xFAtil.", "Sim, sinto o ch\xE3o agora.", "Uma l\xE2mpada e uma porta.", "Agora est\xE1s a usar os teus sentidos."], answer: "Este exerc\xEDcio \xE9 muito \xFAtil.", audio: "Denne \xF8velsen er veldig nyttig" }
+    ]
+  },
+  {
+    id: "beg-1",
+    title: "Iniciante \u2014 parte 1",
+    color: "#16A34A",
+    tier: 1,
+    grammar: {
+      title: "Pronomes pessoais",
+      text: "'Jeg' (eu) e 'du' (tu/voc\xEA) s\xE3o os pronomes mais comuns em di\xE1logos. O verbo n\xE3o muda de forma com a pessoa, diferente do portugu\xEAs."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "takk for det"?', options: ["Obrigado por isso.", "Ol\xE1, est\xE1s com medo?", "Est\xE1 mau tempo l\xE1 fora.", "O meu cora\xE7\xE3o bate r\xE1pido."], answer: "Obrigado por isso.", audio: "Takk for det" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "hei er du redd", audio: "Hei er du redd", pt: "Ol\xE1, est\xE1s com medo?" },
+      { type: "arrange", prompt: 'Monte a frase: "Est\xE1 mau tempo l\xE1 fora."', answer: "Det er uv\xE6r ute", audio: "Det er uv\xE6r ute", pt: "Est\xE1 mau tempo l\xE1 fora." },
+      { type: "mc", prompt: 'O que significa "hjertet mitt banker fort"?', options: ["O meu cora\xE7\xE3o bate r\xE1pido.", "Obrigado por isso.", "Ol\xE1, est\xE1s com medo?", "Est\xE1 mau tempo l\xE1 fora."], answer: "O meu cora\xE7\xE3o bate r\xE1pido.", audio: "Hjertet mitt banker fort" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "takk for det", pt: "Obrigado por isso." }, { no: "hei er du redd", pt: "Ol\xE1, est\xE1s com medo?" }, { no: "det er uv\xE6r ute", pt: "Est\xE1 mau tempo l\xE1 fora." }, { no: "hjertet mitt banker fort", pt: "O meu cora\xE7\xE3o bate r\xE1pido." }] }
+    ]
+  },
+  {
+    id: "beg-2",
+    title: "Iniciante \u2014 parte 2",
+    color: "#22C55E",
+    tier: 1,
+    grammar: {
+      title: "Adv\xE9rbio 'n\xE5' (agora)",
+      text: "'N\xE5' significa 'agora' e costuma aparecer perto do verbo ou no fim da frase: 'jeg puster roligere n\xE5' (respiro mais calmamente agora)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "jeg vet ikke helt"?', options: ["N\xE3o sei bem.", "Isso parece bem.", "Muito obrigado pela ajuda.", "Sinto-me um pouco melhor."], answer: "N\xE3o sei bem.", audio: "Jeg vet ikke helt" },
+      { type: "translate", prompt: 'Traduza: "Isso parece bem."', answer: "det h\xF8res bra ut", audio: "Det h\xF8res bra ut" },
+      { type: "arrange", prompt: 'Monte a frase: "Muito obrigado pela ajuda."', answer: "Tusen takk for hjelpen", audio: "Tusen takk for hjelpen", pt: "Muito obrigado pela ajuda." },
+      { type: "mc", prompt: 'O que significa "det f\xF8les litt bedre"?', options: ["Sinto-me um pouco melhor.", "N\xE3o sei bem.", "Isso parece bem.", "Muito obrigado pela ajuda."], answer: "Sinto-me um pouco melhor.", audio: "Det f\xF8les litt bedre" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "jeg vet ikke helt", pt: "N\xE3o sei bem." }, { no: "det h\xF8res bra ut", pt: "Isso parece bem." }, { no: "tusen takk for hjelpen", pt: "Muito obrigado pela ajuda." }, { no: "det f\xF8les litt bedre", pt: "Sinto-me um pouco melhor." }] }
+    ]
+  },
+  {
+    id: "beg-3",
+    title: "Iniciante \u2014 parte 3",
+    color: "#15803D",
+    tier: 1,
+    grammar: {
+      title: "Palavra 'det' (isso/aquilo)",
+      text: "'Det' funciona como 'isso' e tamb\xE9m em constru\xE7\xF5es impessoais parecidas com '\xE9' em portugu\xEAs: 'det er godt' (\xE9 bom)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "fargene der er vakre"?', options: ["As cores ali s\xE3o bonitas.", "Gosto mais de azul.", "Nomeia coisas que ves.", "Esse \xE9 exatamente o objetivo."], answer: "As cores ali s\xE3o bonitas.", audio: "Fargene der er vakre" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "jeg liker bl\xE5tt best", audio: "Jeg liker bl\xE5tt best", pt: "Gosto mais de azul." },
+      { type: "arrange", prompt: 'Monte a frase: "Nomeia coisas que ves."', answer: "Nevn ting du ser", audio: "Nevn ting du ser", pt: "Nomeia coisas que ves." },
+      { type: "mc", prompt: 'O que significa "det er akkurat m\xE5let"?', options: ["Esse \xE9 exatamente o objetivo.", "As cores ali s\xE3o bonitas.", "Gosto mais de azul.", "Nomeia coisas que ves."], answer: "Esse \xE9 exatamente o objetivo.", audio: "Det er akkurat m\xE5let" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "fargene der er vakre", pt: "As cores ali s\xE3o bonitas." }, { no: "jeg liker bl\xE5tt best", pt: "Gosto mais de azul." }, { no: "nevn ting du ser", pt: "Nomeia coisas que ves." }, { no: "det er akkurat m\xE5let", pt: "Esse \xE9 exatamente o objetivo." }] }
+    ]
+  },
+  {
+    id: "beg-4",
+    title: "Iniciante \u2014 parte 4",
+    color: "#4ADE80",
+    tier: 1,
+    grammar: {
+      title: "Perguntas com invers\xE3o",
+      text: "Em perguntas, o verbo vem antes do sujeito: 'er du redd?' (est\xE1s com medo?), ao inv\xE9s de 'du er redd' (afirma\xE7\xE3o)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "toget er forsinket"?', options: ["O comboio est\xE1 atrasado.", "Sim, estou com um pouco de medo.", "Do que tens medo?", "N\xE3o est\xE1s a esperar sozinho agora."], answer: "O comboio est\xE1 atrasado.", audio: "Toget er forsinket" },
+      { type: "translate", prompt: 'Traduza: "Sim, estou com um pouco de medo."', answer: "ja jeg er litt redd", audio: "Ja jeg er litt redd" },
+      { type: "arrange", prompt: 'Monte a frase: "Do que tens medo?"', answer: "Hva er du redd for", audio: "Hva er du redd for", pt: "Do que tens medo?" },
+      { type: "mc", prompt: 'O que significa "du venter ikke alene n\xE5"?', options: ["N\xE3o est\xE1s a esperar sozinho agora.", "O comboio est\xE1 atrasado.", "Sim, estou com um pouco de medo.", "Do que tens medo?"], answer: "N\xE3o est\xE1s a esperar sozinho agora.", audio: "Du venter ikke alene n\xE5" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "toget er forsinket", pt: "O comboio est\xE1 atrasado." }, { no: "ja jeg er litt redd", pt: "Sim, estou com um pouco de medo." }, { no: "hva er du redd for", pt: "Do que tens medo?" }, { no: "du venter ikke alene n\xE5", pt: "N\xE3o est\xE1s a esperar sozinho agora." }] }
+    ]
+  },
+  {
+    id: "beg-5",
+    title: "Iniciante \u2014 parte 5",
+    color: "#059669",
+    tier: 1,
+    grammar: {
+      title: "Adv\xE9rbio 'litt' (um pouco)",
+      text: "'Litt' suaviza adjetivos e verbos: 'litt redd' (um pouco assustado), 'hjelpe litt' (ajudar um pouco)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "det blir snart m\xF8rkt ute"?', options: ["Vai ficar escuro l\xE1 fora em breve.", "Sim, e o comboio vem tarde.", "Vamos encontrar uma solu\xE7\xE3o juntos.", "Eu aprecio isso."], answer: "Vai ficar escuro l\xE1 fora em breve.", audio: "Det blir snart m\xF8rkt ute" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "ja og toget kommer sent", audio: "Ja og toget kommer sent", pt: "Sim, e o comboio vem tarde." },
+      { type: "arrange", prompt: 'Monte a frase: "Vamos encontrar uma solu\xE7\xE3o juntos."', answer: "Vi finner en l\xF8sning sammen", audio: "Vi finner en l\xF8sning sammen", pt: "Vamos encontrar uma solu\xE7\xE3o juntos." },
+      { type: "mc", prompt: 'O que significa "jeg setter pris p\xE5 det"?', options: ["Eu aprecio isso.", "Vai ficar escuro l\xE1 fora em breve.", "Sim, e o comboio vem tarde.", "Vamos encontrar uma solu\xE7\xE3o juntos."], answer: "Eu aprecio isso.", audio: "Jeg setter pris p\xE5 det" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "det blir snart m\xF8rkt ute", pt: "Vai ficar escuro l\xE1 fora em breve." }, { no: "ja og toget kommer sent", pt: "Sim, e o comboio vem tarde." }, { no: "vi finner en l\xF8sning sammen", pt: "Vamos encontrar uma solu\xE7\xE3o juntos." }, { no: "jeg setter pris p\xE5 det", pt: "Eu aprecio isso." }] }
+    ]
+  },
+  {
+    id: "beg-6",
+    title: "Iniciante \u2014 parte 6",
+    color: "#10B981",
+    tier: 1,
+    grammar: {
+      title: "Palavra 'sammen' (juntos)",
+      text: "'Sammen' (juntos) normalmente aparece no fim da frase: 'vi finner en l\xF8sning sammen' (vamos encontrar uma solu\xE7\xE3o juntos)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "ja jeg lover deg det"?', options: ["Sim, eu prometo-te isso.", "Vamos encontrar um banco juntos.", "Agora expiras devagar.", "Estou a encontrar alguma calma agora."], answer: "Sim, eu prometo-te isso.", audio: "Ja jeg lover deg det" },
+      { type: "translate", prompt: 'Traduza: "Vamos encontrar um banco juntos."', answer: "vi finner en benk sammen", audio: "Vi finner en benk sammen" },
+      { type: "arrange", prompt: 'Monte a frase: "Agora expiras devagar."', answer: "N\xE5 puster du sakte ut", audio: "N\xE5 puster du sakte ut", pt: "Agora expiras devagar." },
+      { type: "mc", prompt: 'O que significa "jeg finner litt ro n\xE5"?', options: ["Estou a encontrar alguma calma agora.", "Sim, eu prometo-te isso.", "Vamos encontrar um banco juntos.", "Agora expiras devagar."], answer: "Estou a encontrar alguma calma agora.", audio: "Jeg finner litt ro n\xE5" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "ja jeg lover deg det", pt: "Sim, eu prometo-te isso." }, { no: "vi finner en benk sammen", pt: "Vamos encontrar um banco juntos." }, { no: "n\xE5 puster du sakte ut", pt: "Agora expiras devagar." }, { no: "jeg finner litt ro n\xE5", pt: "Estou a encontrar alguma calma agora." }] }
+    ]
+  },
+  {
+    id: "beg-7",
+    title: "Iniciante \u2014 parte 7",
+    color: "#65A30D",
+    tier: 1,
+    grammar: {
+      title: "Pronomes pessoais",
+      text: "'Jeg' (eu) e 'du' (tu/voc\xEA) s\xE3o os pronomes mais comuns em di\xE1logos. O verbo n\xE3o muda de forma com a pessoa, diferente do portugu\xEAs."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "jeg lytter til det n\xE5"?', options: ["Estou a ouvir-te agora.", "Conta-me o que est\xE1s a pensar.", "\xC9 um pensamento comum.", "Ajuda falar assim?"], answer: "Estou a ouvir-te agora.", audio: "Jeg lytter til det n\xE5" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "fortell meg hva du tenker", audio: "Fortell meg hva du tenker", pt: "Conta-me o que est\xE1s a pensar." },
+      { type: "arrange", prompt: 'Monte a frase: "\xC9 um pensamento comum."', answer: "Det er en vanlig tanke", audio: "Det er en vanlig tanke", pt: "\xC9 um pensamento comum." },
+      { type: "mc", prompt: 'O que significa "hjelper det \xE5 snakke s\xE5nn"?', options: ["Ajuda falar assim?", "Estou a ouvir-te agora.", "Conta-me o que est\xE1s a pensar.", "\xC9 um pensamento comum."], answer: "Ajuda falar assim?", audio: "Hjelper det \xE5 snakke s\xE5nn" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "jeg lytter til det n\xE5", pt: "Estou a ouvir-te agora." }, { no: "fortell meg hva du tenker", pt: "Conta-me o que est\xE1s a pensar." }, { no: "det er en vanlig tanke", pt: "\xC9 um pensamento comum." }, { no: "hjelper det \xE5 snakke s\xE5nn", pt: "Ajuda falar assim?" }] }
+    ]
+  },
+  {
+    id: "beg-8",
+    title: "Iniciante \u2014 parte 8",
+    color: "#84CC16",
+    tier: 1,
+    grammar: {
+      title: "Adv\xE9rbio 'n\xE5' (agora)",
+      text: "'N\xE5' significa 'agora' e costuma aparecer perto do verbo ou no fim da frase: 'jeg puster roligere n\xE5' (respiro mais calmamente agora)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "klokken er snart 7 n\xE5"?', options: ["S\xE3o quase 7 horas agora.", "\xC9 bom saber.", "Sim, agora sabemos mais.", "Sim, isso parece \xF3timo."], answer: "S\xE3o quase 7 horas agora.", audio: "Klokken er snart 7 n\xE5" },
+      { type: "translate", prompt: 'Traduza: "\xC9 bom saber."', answer: "det er godt \xE5 vite", audio: "Det er godt \xE5 vite" },
+      { type: "arrange", prompt: 'Monte a frase: "Sim, agora sabemos mais."', answer: "Ja n\xE5 vet vi mer", audio: "Ja n\xE5 vet vi mer", pt: "Sim, agora sabemos mais." },
+      { type: "mc", prompt: 'O que significa "ja det h\xF8res fint ut"?', options: ["Sim, isso parece \xF3timo.", "S\xE3o quase 7 horas agora.", "\xC9 bom saber.", "Sim, agora sabemos mais."], answer: "Sim, isso parece \xF3timo.", audio: "Ja det h\xF8res fint ut" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "klokken er snart 7 n\xE5", pt: "S\xE3o quase 7 horas agora." }, { no: "det er godt \xE5 vite", pt: "\xC9 bom saber." }, { no: "ja n\xE5 vet vi mer", pt: "Sim, agora sabemos mais." }, { no: "ja det h\xF8res fint ut", pt: "Sim, isso parece \xF3timo." }] }
+    ]
+  },
+  {
+    id: "beg-9",
+    title: "Iniciante \u2014 parte 9",
+    color: "#0D9488",
+    tier: 1,
+    grammar: {
+      title: "Palavra 'det' (isso/aquilo)",
+      text: "'Det' funciona como 'isso' e tamb\xE9m em constru\xE7\xF5es impessoais parecidas com '\xE9' em portugu\xEAs: 'det er godt' (\xE9 bom)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "ja tusen takk for ideen"?', options: ["Sim, muito obrigado pela ideia.", "Na verdade ajuda muito agora.", "Est\xE1s a dar-te muito bem com isto.", "Muito obrigado pela tua ajuda."], answer: "Sim, muito obrigado pela ideia.", audio: "Ja tusen takk for ideen" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "det hjelper faktisk mye n\xE5", audio: "Det hjelper faktisk mye n\xE5", pt: "Na verdade ajuda muito agora." },
+      { type: "arrange", prompt: 'Monte a frase: "Est\xE1s a dar-te muito bem com isto."', answer: "Du klarer dette veldig bra", audio: "Du klarer dette veldig bra", pt: "Est\xE1s a dar-te muito bem com isto." },
+      { type: "mc", prompt: 'O que significa "tusen takk for hjelpen din"?', options: ["Muito obrigado pela tua ajuda.", "Sim, muito obrigado pela ideia.", "Na verdade ajuda muito agora.", "Est\xE1s a dar-te muito bem com isto."], answer: "Muito obrigado pela tua ajuda.", audio: "Tusen takk for hjelpen din" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "ja tusen takk for ideen", pt: "Sim, muito obrigado pela ideia." }, { no: "det hjelper faktisk mye n\xE5", pt: "Na verdade ajuda muito agora." }, { no: "du klarer dette veldig bra", pt: "Est\xE1s a dar-te muito bem com isto." }, { no: "tusen takk for hjelpen din", pt: "Muito obrigado pela tua ajuda." }] }
+    ]
+  },
+  {
+    id: "mid-1",
+    title: "Intermedi\xE1rio \u2014 parte 1",
+    color: "#D97706",
+    tier: 2,
+    grammar: {
+      title: "Verbos modais",
+      text: "'Kan', 'vil', 'skal' e 'm\xE5' v\xEAm antes do verbo principal no infinitivo (sem '\xE5'): 'jeg kan hjelpe' (eu posso ajudar)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "det er god plass her"?', options: ["H\xE1 bastante espa\xE7o aqui.", "Isso significa muito para mim.", "Olha, o teu corpo lembra-se do exerc\xEDcio.", "Sim, uma noite muito importante."], answer: "H\xE1 bastante espa\xE7o aqui.", audio: "Det er god plass her" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "det betyr mye for meg", audio: "Det betyr mye for meg", pt: "Isso significa muito para mim." },
+      { type: "arrange", prompt: 'Monte a frase: "Olha, o teu corpo lembra-se do exerc\xEDcio."', answer: "Se kroppen din husker \xF8velsen", audio: "Se kroppen din husker \xF8velsen", pt: "Olha, o teu corpo lembra-se do exerc\xEDcio." },
+      { type: "mc", prompt: 'O que significa "ja en veldig viktig kveld"?', options: ["Sim, uma noite muito importante.", "H\xE1 bastante espa\xE7o aqui.", "Isso significa muito para mim.", "Olha, o teu corpo lembra-se do exerc\xEDcio."], answer: "Sim, uma noite muito importante.", audio: "Ja en veldig viktig kveld" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "det er god plass her", pt: "H\xE1 bastante espa\xE7o aqui." }, { no: "det betyr mye for meg", pt: "Isso significa muito para mim." }, { no: "se kroppen din husker \xF8velsen", pt: "Olha, o teu corpo lembra-se do exerc\xEDcio." }, { no: "ja en veldig viktig kveld", pt: "Sim, uma noite muito importante." }] }
+    ]
+  },
+  {
+    id: "mid-2",
+    title: "Intermedi\xE1rio \u2014 parte 2",
+    color: "#F59E0B",
+    tier: 2,
+    grammar: {
+      title: "Conjun\xE7\xE3o 'n\xE5r' (quando)",
+      text: "'N\xE5r' introduz ora\xE7\xF5es de tempo: 'n\xE5r du puster inn' (quando inspiras). A ordem do verbo muda na ora\xE7\xE3o subordinada."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "jeg skriver det ned n\xE5"?', options: ["Estou a escrev\xEA-lo agora.", "Pratica-o em casa tamb\xE9m.", "Obrigado por este bom plano.", "Muito, muito obrigado por tudo."], answer: "Estou a escrev\xEA-lo agora.", audio: "Jeg skriver det ned n\xE5" },
+      { type: "translate", prompt: 'Traduza: "Pratica-o em casa tamb\xE9m."', answer: "\xF8v p\xE5 den hjemme ogs\xE5", audio: "\xD8v p\xE5 den hjemme ogs\xE5" },
+      { type: "arrange", prompt: 'Monte a frase: "Obrigado por este bom plano."', answer: "Takk for denne gode planen", audio: "Takk for denne gode planen", pt: "Obrigado por este bom plano." },
+      { type: "mc", prompt: 'O que significa "tusen tusen takk for alt"?', options: ["Muito, muito obrigado por tudo.", "Estou a escrev\xEA-lo agora.", "Pratica-o em casa tamb\xE9m.", "Obrigado por este bom plano."], answer: "Muito, muito obrigado por tudo.", audio: "Tusen tusen takk for alt" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "jeg skriver det ned n\xE5", pt: "Estou a escrev\xEA-lo agora." }, { no: "\xF8v p\xE5 den hjemme ogs\xE5", pt: "Pratica-o em casa tamb\xE9m." }, { no: "takk for denne gode planen", pt: "Obrigado por este bom plano." }, { no: "tusen tusen takk for alt", pt: "Muito, muito obrigado por tudo." }] }
+    ]
+  },
+  {
+    id: "mid-3",
+    title: "Intermedi\xE1rio \u2014 parte 3",
+    color: "#EA580C",
+    tier: 2,
+    grammar: {
+      title: "Reflexivos",
+      text: "Verbos reflexivos usam 'seg/meg/deg': 'slappe av seg' (relaxar-se). Note a posi\xE7\xE3o do pronome depois do verbo."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "ja jeg f\xF8ler meg trygg"?', options: ["Sim, sinto-me seguro.", "Adeus e muito obrigado novamente.", "Como se chama o teu medo?", "Est\xE1s a respirar mais calmamente agora?"], answer: "Sim, sinto-me seguro.", audio: "Ja jeg f\xF8ler meg trygg" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "farvel og tusen takk igjen", audio: "Farvel og tusen takk igjen", pt: "Adeus e muito obrigado novamente." },
+      { type: "arrange", prompt: 'Monte a frase: "Como se chama o teu medo?"', answer: "Hva heter redselen din", audio: "Hva heter redselen din", pt: "Como se chama o teu medo?" },
+      { type: "mc", prompt: 'O que significa "puster du roligere n\xE5"?', options: ["Est\xE1s a respirar mais calmamente agora?", "Sim, sinto-me seguro.", "Adeus e muito obrigado novamente.", "Como se chama o teu medo?"], answer: "Est\xE1s a respirar mais calmamente agora?", audio: "Puster du roligere n\xE5" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "ja jeg f\xF8ler meg trygg", pt: "Sim, sinto-me seguro." }, { no: "farvel og tusen takk igjen", pt: "Adeus e muito obrigado novamente." }, { no: "hva heter redselen din", pt: "Como se chama o teu medo?" }, { no: "puster du roligere n\xE5", pt: "Est\xE1s a respirar mais calmamente agora?" }] }
+    ]
+  },
+  {
+    id: "mid-9",
+    title: "Intermedi\xE1rio \u2014 parte 9",
+    color: "#DB6B0B",
+    tier: 2,
+    grammar: {
+      title: "Verbos modais",
+      text: "'Kan', 'vil', 'skal' e 'm\xE5' v\xEAm antes do verbo principal no infinitivo (sem '\xE5'): 'jeg kan hjelpe' (eu posso ajudar)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "kan du hjelpe meg litt"?', options: ["Podes ajudar-me um pouco?", "O que devo fazer agora?", "Podemos sentar-nos e conversar.", "Podes respirar fundo agora?"], answer: "Podes ajudar-me um pouco?", audio: "Kan du hjelpe meg litt" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "hva skal jeg gj\xF8re n\xE5", audio: "Hva skal jeg gj\xF8re n\xE5", pt: "O que devo fazer agora?" },
+      { type: "arrange", prompt: 'Monte a frase: "Podemos sentar-nos e conversar."', answer: "Vi kan sitte og prate", audio: "Vi kan sitte og prate", pt: "Podemos sentar-nos e conversar." },
+      { type: "mc", prompt: 'O que significa "kan du puste dypt n\xE5"?', options: ["Podes respirar fundo agora?", "Podes ajudar-me um pouco?", "O que devo fazer agora?", "Podemos sentar-nos e conversar."], answer: "Podes respirar fundo agora?", audio: "Kan du puste dypt n\xE5" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "kan du hjelpe meg litt", pt: "Podes ajudar-me um pouco?" }, { no: "hva skal jeg gj\xF8re n\xE5", pt: "O que devo fazer agora?" }, { no: "vi kan sitte og prate", pt: "Podemos sentar-nos e conversar." }, { no: "kan du puste dypt n\xE5", pt: "Podes respirar fundo agora?" }] }
+    ]
+  },
+  {
+    id: "mid-4",
+    title: "Intermedi\xE1rio \u2014 parte 4",
+    color: "#F97316",
+    tier: 2,
+    grammar: {
+      title: "Adv\xE9rbios de grau",
+      text: "'Veldig' (muito) e 'litt' (um pouco) modificam adjetivos: 'veldig viktig' (muito importante)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "bra fortsett litt til"?', options: ["Boa, continua mais um pouco.", "Obrigado pela tua paci\xEAncia.", "N\xE3o faz mal ter medo.", "N\xE3o gosto de esperar sozinho."], answer: "Boa, continua mais um pouco.", audio: "Bra fortsett litt til" },
+      { type: "translate", prompt: 'Traduza: "Obrigado pela tua paci\xEAncia."', answer: "takk for t\xE5lmodigheten din", audio: "Takk for t\xE5lmodigheten din" },
+      { type: "arrange", prompt: 'Monte a frase: "N\xE3o faz mal ter medo."', answer: "Det er greit \xE5 v\xE6re redd", audio: "Det er greit \xE5 v\xE6re redd", pt: "N\xE3o faz mal ter medo." },
+      { type: "mc", prompt: 'O que significa "jeg liker ikke \xE5 vente alene"?', options: ["N\xE3o gosto de esperar sozinho.", "Boa, continua mais um pouco.", "Obrigado pela tua paci\xEAncia.", "N\xE3o faz mal ter medo."], answer: "N\xE3o gosto de esperar sozinho.", audio: "Jeg liker ikke \xE5 vente alene" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "bra fortsett litt til", pt: "Boa, continua mais um pouco." }, { no: "takk for t\xE5lmodigheten din", pt: "Obrigado pela tua paci\xEAncia." }, { no: "det er greit \xE5 v\xE6re redd", pt: "N\xE3o faz mal ter medo." }, { no: "jeg liker ikke \xE5 vente alene", pt: "N\xE3o gosto de esperar sozinho." }] }
+    ]
+  },
+  {
+    id: "mid-7",
+    title: "Intermedi\xE1rio \u2014 parte 7",
+    color: "#C2410C",
+    tier: 2,
+    grammar: {
+      title: "Reflexivos",
+      text: "Verbos reflexivos usam 'seg/meg/deg': 'slappe av seg' (relaxar-se). Note a posi\xE7\xE3o do pronome depois do verbo."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "du trenger ikke v\xE6re alene n\xE5"?', options: ["N\xE3o precisas de estar sozinho agora.", "Estou feliz por estares aqui.", "N\xE3o, ainda n\xE3o na verdade.", "Prometo praticar todos os dias."], answer: "N\xE3o precisas de estar sozinho agora.", audio: "Du trenger ikke v\xE6re alene n\xE5" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "jeg er glad du er her", audio: "Jeg er glad du er her", pt: "Estou feliz por estares aqui." },
+      { type: "arrange", prompt: 'Monte a frase: "N\xE3o, ainda n\xE3o na verdade."', answer: "Nei ikke enn\xE5 faktisk", audio: "Nei ikke enn\xE5 faktisk", pt: "N\xE3o, ainda n\xE3o na verdade." },
+      { type: "mc", prompt: 'O que significa "jeg lover \xE5 \xF8ve hver dag"?', options: ["Prometo praticar todos os dias.", "N\xE3o precisas de estar sozinho agora.", "Estou feliz por estares aqui.", "N\xE3o, ainda n\xE3o na verdade."], answer: "Prometo praticar todos os dias.", audio: "Jeg lover \xE5 \xF8ve hver dag" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "du trenger ikke v\xE6re alene n\xE5", pt: "N\xE3o precisas de estar sozinho agora." }, { no: "jeg er glad du er her", pt: "Estou feliz por estares aqui." }, { no: "nei ikke enn\xE5 faktisk", pt: "N\xE3o, ainda n\xE3o na verdade." }, { no: "jeg lover \xE5 \xF8ve hver dag", pt: "Prometo praticar todos os dias." }] }
+    ]
+  },
+  {
+    id: "mid-10",
+    title: "Intermedi\xE1rio \u2014 parte 10",
+    color: "#E8850C",
+    tier: 2,
+    grammar: {
+      title: "Conjun\xE7\xE3o 'n\xE5r' (quando)",
+      text: "'N\xE5r' introduz ora\xE7\xF5es de tempo: 'n\xE5r du puster inn' (quando inspiras). A ordem do verbo muda na ora\xE7\xE3o subordinada."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "vi kan gj\xF8re det igjen"?', options: ["Podemos fazer isso de novo.", "Queres falar sobre isso?", "Sim, pode aliviar um pouco.", "Sim, ajuda muitas pessoas."], answer: "Podemos fazer isso de novo.", audio: "Vi kan gj\xF8re det igjen" },
+      { type: "translate", prompt: 'Traduza: "Queres falar sobre isso?"', answer: "vil du snakke om det", audio: "Vil du snakke om det" },
+      { type: "arrange", prompt: 'Monte a frase: "Sim, pode aliviar um pouco."', answer: "Ja det kan lette litt", audio: "Ja det kan lette litt", pt: "Sim, pode aliviar um pouco." },
+      { type: "mc", prompt: 'O que significa "ja det hjelper mange mennesker"?', options: ["Sim, ajuda muitas pessoas.", "Podemos fazer isso de novo.", "Queres falar sobre isso?", "Sim, pode aliviar um pouco."], answer: "Sim, ajuda muitas pessoas.", audio: "Ja det hjelper mange mennesker" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "vi kan gj\xF8re det igjen", pt: "Podemos fazer isso de novo." }, { no: "vil du snakke om det", pt: "Queres falar sobre isso?" }, { no: "ja det kan lette litt", pt: "Sim, pode aliviar um pouco." }, { no: "ja det hjelper mange mennesker", pt: "Sim, ajuda muitas pessoas." }] }
+    ]
+  },
+  {
+    id: "mid-5",
+    title: "Intermedi\xE1rio \u2014 parte 5",
+    color: "#CA8A04",
+    tier: 2,
+    grammar: {
+      title: "Verbos modais",
+      text: "'Kan', 'vil', 'skal' e 'm\xE5' v\xEAm antes do verbo principal no infinitivo (sem '\xE5'): 'jeg kan hjelpe' (eu posso ajudar)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "jeg tenker p\xE5 toget hele tiden"?', options: ["Penso no comboio o tempo todo.", "Sim, e tamb\xE9m estou a suar um pouco.", "Uma bagagem, um livro, um rel\xF3gio.", "Sinto-me mais presente."], answer: "Penso no comboio o tempo todo.", audio: "Jeg tenker p\xE5 toget hele tiden" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "ja og jeg svetter ogs\xE5 litt", audio: "Ja og jeg svetter ogs\xE5 litt", pt: "Sim, e tamb\xE9m estou a suar um pouco." },
+      { type: "arrange", prompt: 'Monte a frase: "Uma bagagem, um livro, um rel\xF3gio."', answer: "En bagasje en bok en klokke", audio: "En bagasje en bok en klokke", pt: "Uma bagagem, um livro, um rel\xF3gio." },
+      { type: "mc", prompt: 'O que significa "jeg f\xF8ler meg mer til stede"?', options: ["Sinto-me mais presente.", "Penso no comboio o tempo todo.", "Sim, e tamb\xE9m estou a suar um pouco.", "Uma bagagem, um livro, um rel\xF3gio."], answer: "Sinto-me mais presente.", audio: "Jeg f\xF8ler meg mer til stede" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "jeg tenker p\xE5 toget hele tiden", pt: "Penso no comboio o tempo todo." }, { no: "ja og jeg svetter ogs\xE5 litt", pt: "Sim, e tamb\xE9m estou a suar um pouco." }, { no: "en bagasje en bok en klokke", pt: "Uma bagagem, um livro, um rel\xF3gio." }, { no: "jeg f\xF8ler meg mer til stede", pt: "Sinto-me mais presente." }] }
+    ]
+  },
+  {
+    id: "mid-6",
+    title: "Intermedi\xE1rio \u2014 parte 6",
+    color: "#EAB308",
+    tier: 2,
+    grammar: {
+      title: "Conjun\xE7\xE3o 'n\xE5r' (quando)",
+      text: "'N\xE5r' introduz ora\xE7\xF5es de tempo: 'n\xE5r du puster inn' (quando inspiras). A ordem do verbo muda na ora\xE7\xE3o subordinada."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "du trenger ikke \xE5 skamme deg"?', options: ["N\xE3o precisas de ter vergonha.", "\xC9 bom ouvir isso.", "Boa, \xE9 um passo importante.", "\xC9s muito simp\xE1tico para mim."], answer: "N\xE3o precisas de ter vergonha.", audio: "Du trenger ikke \xE5 skamme deg" },
+      { type: "translate", prompt: 'Traduza: "\xC9 bom ouvir isso."', answer: "det er godt \xE5 h\xF8re det", audio: "Det er godt \xE5 h\xF8re det" },
+      { type: "arrange", prompt: 'Monte a frase: "Boa, \xE9 um passo importante."', answer: "Bra det er et viktig steg", audio: "Bra det er et viktig steg", pt: "Boa, \xE9 um passo importante." },
+      { type: "mc", prompt: 'O que significa "du er veldig vennlig mot meg"?', options: ["\xC9s muito simp\xE1tico para mim.", "N\xE3o precisas de ter vergonha.", "\xC9 bom ouvir isso.", "Boa, \xE9 um passo importante."], answer: "\xC9s muito simp\xE1tico para mim.", audio: "Du er veldig vennlig mot meg" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "du trenger ikke \xE5 skamme deg", pt: "N\xE3o precisas de ter vergonha." }, { no: "det er godt \xE5 h\xF8re det", pt: "\xC9 bom ouvir isso." }, { no: "bra det er et viktig steg", pt: "Boa, \xE9 um passo importante." }, { no: "du er veldig vennlig mot meg", pt: "\xC9s muito simp\xE1tico para mim." }] }
+    ]
+  },
+  {
+    id: "mid-8",
+    title: "Intermedi\xE1rio \u2014 parte 8",
+    color: "#B45309",
+    tier: 2,
+    grammar: {
+      title: "Adv\xE9rbios de grau",
+      text: "'Veldig' (muito) e 'litt' (um pouco) modificam adjetivos: 'veldig viktig' (muito importante)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "det gleder meg \xE5 h\xF8re det"?', options: ["Fico feliz por ouvir isso.", "Estou t\xE3o aliviado neste momento.", "Est\xE1s pronto para a tua viagem.", "Tenha uma boa e segura viagem."], answer: "Fico feliz por ouvir isso.", audio: "Det gleder meg \xE5 h\xF8re det" },
+      { type: "translate", prompt: 'Traduza: "Estou t\xE3o aliviado neste momento."', answer: "jeg er s\xE5 lettet akkurat n\xE5", audio: "Jeg er s\xE5 lettet akkurat n\xE5" },
+      { type: "arrange", prompt: 'Monte a frase: "Est\xE1s pronto para a tua viagem."', answer: "Du er klar for reisen din", audio: "Du er klar for reisen din", pt: "Est\xE1s pronto para a tua viagem." },
+      { type: "mc", prompt: 'O que significa "ha en god og trygg reise"?', options: ["Tenha uma boa e segura viagem.", "Fico feliz por ouvir isso.", "Estou t\xE3o aliviado neste momento.", "Est\xE1s pronto para a tua viagem."], answer: "Tenha uma boa e segura viagem.", audio: "Ha en god og trygg reise" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "det gleder meg \xE5 h\xF8re det", pt: "Fico feliz por ouvir isso." }, { no: "jeg er s\xE5 lettet akkurat n\xE5", pt: "Estou t\xE3o aliviado neste momento." }, { no: "du er klar for reisen din", pt: "Est\xE1s pronto para a tua viagem." }, { no: "ha en god og trygg reise", pt: "Tenha uma boa e segura viagem." }] }
+    ]
+  },
+  {
+    id: "adv-2",
+    title: "Avan\xE7ado \u2014 parte 2",
+    color: "#C026D3",
+    tier: 3,
+    grammar: {
+      title: "Conjun\xE7\xE3o 'men' (mas)",
+      text: "'Men' liga duas ideias contrastantes: 'fremmed men hjelpsom' (estranho mas prest\xE1vel). N\xE3o muda a ordem das palavras."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "jeg slapper av skuldrene n\xE5"?', options: ["Estou a relaxar os ombros agora.", "Boa, o teu corpo est\xE1 a ficar mais calmo.", "Sim, com prazer, eu quero.", "Eu s\xF3 quero ajudar-te."], answer: "Estou a relaxar os ombros agora.", audio: "Jeg slapper av skuldrene n\xE5" },
+      { type: "translate", prompt: 'Traduza: "Boa, o teu corpo est\xE1 a ficar mais calmo."', answer: "bra kroppen din blir roligere", audio: "Bra kroppen din blir roligere" },
+      { type: "arrange", prompt: 'Monte a frase: "Sim, com prazer, eu quero."', answer: "Ja gjerne det vil jeg", audio: "Ja gjerne det vil jeg", pt: "Sim, com prazer, eu quero." },
+      { type: "mc", prompt: 'O que significa "jeg vil bare hjelpe deg"?', options: ["Eu s\xF3 quero ajudar-te.", "Estou a relaxar os ombros agora.", "Boa, o teu corpo est\xE1 a ficar mais calmo.", "Sim, com prazer, eu quero."], answer: "Eu s\xF3 quero ajudar-te.", audio: "Jeg vil bare hjelpe deg" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "jeg slapper av skuldrene n\xE5", pt: "Estou a relaxar os ombros agora." }, { no: "bra kroppen din blir roligere", pt: "Boa, o teu corpo est\xE1 a ficar mais calmo." }, { no: "ja gjerne det vil jeg", pt: "Sim, com prazer, eu quero." }, { no: "jeg vil bare hjelpe deg", pt: "Eu s\xF3 quero ajudar-te." }] }
+    ]
+  },
+  {
+    id: "adv-3",
+    title: "Avan\xE7ado \u2014 parte 3",
+    color: "#9333EA",
+    tier: 3,
+    grammar: {
+      title: "Ora\xE7\xF5es subordinadas com 'at'",
+      text: "'At' introduz ora\xE7\xF5es completivas: 'jeg tror at...' (eu acho que...). Verbos de opini\xE3o costumam vir seguidos de 'at'."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "jeg brukte puste\xF8velsen din nettopp"?', options: ["Acabei de usar o teu exerc\xEDcio de respira\xE7\xE3o.", "O meu cora\xE7\xE3o bate mais calmo agora.", "Vou recordar esta noite.", "Sim, estou muito grato."], answer: "Acabei de usar o teu exerc\xEDcio de respira\xE7\xE3o.", audio: "Jeg brukte puste\xF8velsen din nettopp" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "hjertet mitt banker roligere n\xE5", audio: "Hjertet mitt banker roligere n\xE5", pt: "O meu cora\xE7\xE3o bate mais calmo agora." },
+      { type: "arrange", prompt: 'Monte a frase: "Vou recordar esta noite."', answer: "Jeg vil huske denne kvelden", audio: "Jeg vil huske denne kvelden", pt: "Vou recordar esta noite." },
+      { type: "mc", prompt: 'O que significa "ja jeg er veldig takknemlig"?', options: ["Sim, estou muito grato.", "Acabei de usar o teu exerc\xEDcio de respira\xE7\xE3o.", "O meu cora\xE7\xE3o bate mais calmo agora.", "Vou recordar esta noite."], answer: "Sim, estou muito grato.", audio: "Ja jeg er veldig takknemlig" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "jeg brukte puste\xF8velsen din nettopp", pt: "Acabei de usar o teu exerc\xEDcio de respira\xE7\xE3o." }, { no: "hjertet mitt banker roligere n\xE5", pt: "O meu cora\xE7\xE3o bate mais calmo agora." }, { no: "jeg vil huske denne kvelden", pt: "Vou recordar esta noite." }, { no: "ja jeg er veldig takknemlig", pt: "Sim, estou muito grato." }] }
+    ]
+  },
+  {
+    id: "adv-4",
+    title: "Avan\xE7ado \u2014 parte 4",
+    color: "#DC2626",
+    tier: 3,
+    grammar: {
+      title: "Comparativos",
+      text: "Comparativos terminam em '-ere': 'roligere' (mais calmo), 'bedre' (melhor, irregular)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "husk puste\xF8velsen p\xE5 reisen din"?', options: ["Lembra-te do exerc\xEDcio de respira\xE7\xE3o na tua viagem.", "Adeus, bom estranho.", "Ainda n\xE3o sei bem.", "Acredito em ti agora, de facto."], answer: "Lembra-te do exerc\xEDcio de respira\xE7\xE3o na tua viagem.", audio: "Husk puste\xF8velsen p\xE5 reisen din" },
+      { type: "translate", prompt: 'Traduza: "Adeus, bom estranho."', answer: "ha det bra snille fremmede", audio: "Ha det bra snille fremmede" },
+      { type: "arrange", prompt: 'Monte a frase: "Ainda n\xE3o sei bem."', answer: "Jeg vet ikke helt enn\xE5", audio: "Jeg vet ikke helt enn\xE5", pt: "Ainda n\xE3o sei bem." },
+      { type: "mc", prompt: 'O que significa "jeg tror deg faktisk n\xE5"?', options: ["Acredito em ti agora, de facto.", "Lembra-te do exerc\xEDcio de respira\xE7\xE3o na tua viagem.", "Adeus, bom estranho.", "Ainda n\xE3o sei bem."], answer: "Acredito em ti agora, de facto.", audio: "Jeg tror deg faktisk n\xE5" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "husk puste\xF8velsen p\xE5 reisen din", pt: "Lembra-te do exerc\xEDcio de respira\xE7\xE3o na tua viagem." }, { no: "ha det bra snille fremmede", pt: "Adeus, bom estranho." }, { no: "jeg vet ikke helt enn\xE5", pt: "Ainda n\xE3o sei bem." }, { no: "jeg tror deg faktisk n\xE5", pt: "Acredito em ti agora, de facto." }] }
+    ]
+  },
+  {
+    id: "adv-1",
+    title: "Avan\xE7ado \u2014 parte 1",
+    color: "#BE185D",
+    tier: 3,
+    grammar: {
+      title: "Tempo composto com 'har'",
+      text: "'Har' + partic\xEDpio passado forma o pret\xE9rito perfeito: 'jeg har brukt' (eu usei/tenho usado)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "toget kommer om 30 minutter"?', options: ["O comboio chega daqui a 30 minutos.", "Sim, agora estou a respirar mais calmamente.", "Olha para o c\xE9u ali ao fundo.", "Sim, sinto-me mais calmo."], answer: "O comboio chega daqui a 30 minutos.", audio: "Toget kommer om 30 minutter" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "ja n\xE5 puster jeg roligere", audio: "Ja n\xE5 puster jeg roligere", pt: "Sim, agora estou a respirar mais calmamente." },
+      { type: "arrange", prompt: 'Monte a frase: "Olha para o c\xE9u ali ao fundo."', answer: "Se p\xE5 himmelen der borte", audio: "Se p\xE5 himmelen der borte", pt: "Olha para o c\xE9u ali ao fundo." },
+      { type: "mc", prompt: 'O que significa "ja jeg f\xF8ler meg roligere"?', options: ["Sim, sinto-me mais calmo.", "O comboio chega daqui a 30 minutos.", "Sim, agora estou a respirar mais calmamente.", "Olha para o c\xE9u ali ao fundo."], answer: "Sim, sinto-me mais calmo.", audio: "Ja jeg f\xF8ler meg roligere" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "toget kommer om 30 minutter", pt: "O comboio chega daqui a 30 minutos." }, { no: "ja n\xE5 puster jeg roligere", pt: "Sim, agora estou a respirar mais calmamente." }, { no: "se p\xE5 himmelen der borte", pt: "Olha para o c\xE9u ali ao fundo." }, { no: "ja jeg f\xF8ler meg roligere", pt: "Sim, sinto-me mais calmo." }] }
+    ]
+  },
+  {
+    id: "adv-6",
+    title: "Avan\xE7ado \u2014 parte 6",
+    color: "#A21CAF",
+    tier: 3,
+    grammar: {
+      title: "Conjun\xE7\xE3o 'men' (mas)",
+      text: "'Men' liga duas ideias contrastantes: 'fremmed men hjelpsom' (estranho mas prest\xE1vel). N\xE3o muda a ordem das palavras."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "vi kan vente p\xE5 toget sammen"?', options: ["Podemos esperar pelo comboio juntos.", "Sim, sinto uma mudan\xE7a agora.", "Podemos fazer um plano juntos.", "Pareces muito grato esta noite."], answer: "Podemos esperar pelo comboio juntos.", audio: "Vi kan vente p\xE5 toget sammen" },
+      { type: "translate", prompt: 'Traduza: "Sim, sinto uma mudan\xE7a agora."', answer: "ja jeg f\xF8ler en forandring n\xE5", audio: "Ja jeg f\xF8ler en forandring n\xE5" },
+      { type: "arrange", prompt: 'Monte a frase: "Podemos fazer um plano juntos."', answer: "Vi kan lage en plan sammen", audio: "Vi kan lage en plan sammen", pt: "Podemos fazer um plano juntos." },
+      { type: "mc", prompt: 'O que significa "du virker veldig takknemlig i kveld"?', options: ["Pareces muito grato esta noite.", "Podemos esperar pelo comboio juntos.", "Sim, sinto uma mudan\xE7a agora.", "Podemos fazer um plano juntos."], answer: "Pareces muito grato esta noite.", audio: "Du virker veldig takknemlig i kveld" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "vi kan vente p\xE5 toget sammen", pt: "Podemos esperar pelo comboio juntos." }, { no: "ja jeg f\xF8ler en forandring n\xE5", pt: "Sim, sinto uma mudan\xE7a agora." }, { no: "vi kan lage en plan sammen", pt: "Podemos fazer um plano juntos." }, { no: "du virker veldig takknemlig i kveld", pt: "Pareces muito grato esta noite." }] }
+    ]
+  },
+  {
+    id: "adv-7",
+    title: "Avan\xE7ado \u2014 parte 7",
+    color: "#7E22CE",
+    tier: 3,
+    grammar: {
+      title: "Ora\xE7\xF5es subordinadas com 'at'",
+      text: "'At' introduz ora\xE7\xF5es completivas: 'jeg tror at...' (eu acho que...). Verbos de opini\xE3o costumam vir seguidos de 'at'."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "jeg vil heller ikke glemme det"?', options: ["Eu tamb\xE9m n\xE3o me vou esquecer disso.", "Vou lembrar-me de tudo o que disseste.", "A incerteza \xE9 dif\xEDcil para muitos.", "Claro que te posso ajudar."], answer: "Eu tamb\xE9m n\xE3o me vou esquecer disso.", audio: "Jeg vil heller ikke glemme det" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "jeg skal huske alt du sa", audio: "Jeg skal huske alt du sa", pt: "Vou lembrar-me de tudo o que disseste." },
+      { type: "arrange", prompt: 'Monte a frase: "A incerteza \xE9 dif\xEDcil para muitos."', answer: "Uvisshet er vanskelig for mange", audio: "Uvisshet er vanskelig for mange", pt: "A incerteza \xE9 dif\xEDcil para muitos." },
+      { type: "mc", prompt: 'O que significa "selvf\xF8lgelig kan jeg hjelpe deg"?', options: ["Claro que te posso ajudar.", "Eu tamb\xE9m n\xE3o me vou esquecer disso.", "Vou lembrar-me de tudo o que disseste.", "A incerteza \xE9 dif\xEDcil para muitos."], answer: "Claro que te posso ajudar.", audio: "Selvf\xF8lgelig kan jeg hjelpe deg" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "jeg vil heller ikke glemme det", pt: "Eu tamb\xE9m n\xE3o me vou esquecer disso." }, { no: "jeg skal huske alt du sa", pt: "Vou lembrar-me de tudo o que disseste." }, { no: "uvisshet er vanskelig for mange", pt: "A incerteza \xE9 dif\xEDcil para muitos." }, { no: "selvf\xF8lgelig kan jeg hjelpe deg", pt: "Claro que te posso ajudar." }] }
+    ]
+  },
+  {
+    id: "adv-5",
+    title: "Avan\xE7ado \u2014 parte 5",
+    color: "#B91C1C",
+    tier: 3,
+    grammar: {
+      title: "Tempo composto com 'har'",
+      text: "'Har' + partic\xEDpio passado forma o pret\xE9rito perfeito: 'jeg har brukt' (eu usei/tenho usado)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "du er trygg her p\xE5 stasjonen"?', options: ["Est\xE1s seguro aqui na esta\xE7\xE3o.", "Vamos falar de outra coisa?", "O meu corpo parece reagir ao medo.", "Tenta relaxar os teus ombros."], answer: "Est\xE1s seguro aqui na esta\xE7\xE3o.", audio: "Du er trygg her p\xE5 stasjonen" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "skal vi prate om noe annet", audio: "Skal vi prate om noe annet", pt: "Vamos falar de outra coisa?" },
+      { type: "arrange", prompt: 'Monte a frase: "O meu corpo parece reagir ao medo."', answer: "Kroppen min reagerer visst p\xE5 frykt", audio: "Kroppen min reagerer visst p\xE5 frykt", pt: "O meu corpo parece reagir ao medo." },
+      { type: "mc", prompt: 'O que significa "pr\xF8v \xE5 slappe av skuldrene dine"?', options: ["Tenta relaxar os teus ombros.", "Est\xE1s seguro aqui na esta\xE7\xE3o.", "Vamos falar de outra coisa?", "O meu corpo parece reagir ao medo."], answer: "Tenta relaxar os teus ombros.", audio: "Pr\xF8v \xE5 slappe av skuldrene dine" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "du er trygg her p\xE5 stasjonen", pt: "Est\xE1s seguro aqui na esta\xE7\xE3o." }, { no: "skal vi prate om noe annet", pt: "Vamos falar de outra coisa?" }, { no: "kroppen min reagerer visst p\xE5 frykt", pt: "O meu corpo parece reagir ao medo." }, { no: "pr\xF8v \xE5 slappe av skuldrene dine", pt: "Tenta relaxar os teus ombros." }] }
+    ]
+  },
+  {
+    id: "adv-8",
+    title: "Avan\xE7ado \u2014 parte 8",
+    color: "#DB2777",
+    tier: 3,
+    grammar: {
+      title: "Comparativos",
+      text: "Comparativos terminam em '-ere': 'roligere' (mais calmo), 'bedre' (melhor, irregular)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "det er normalt \xE5 f\xF8le s\xE5nn vet du"?', options: ["\xC9 normal sentir assim, sabes.", "Devias estar orgulhoso, verdadeiramente.", "Escreve o exerc\xEDcio de respira\xE7\xE3o no telem\xF3vel.", "Funciona bem, n\xE3o \xE9 verdade?"], answer: "\xC9 normal sentir assim, sabes.", audio: "Det er normalt \xE5 f\xF8le s\xE5nn vet du" },
+      { type: "translate", prompt: 'Traduza: "Devias estar orgulhoso, verdadeiramente."', answer: "du b\xF8r v\xE6re stolt virkelig", audio: "Du b\xF8r v\xE6re stolt virkelig" },
+      { type: "arrange", prompt: 'Monte a frase: "Escreve o exerc\xEDcio de respira\xE7\xE3o no telem\xF3vel."', answer: "Skriv ned puste\xF8velsen p\xE5 telefonen", audio: "Skriv ned puste\xF8velsen p\xE5 telefonen", pt: "Escreve o exerc\xEDcio de respira\xE7\xE3o no telem\xF3vel." },
+      { type: "mc", prompt: 'O que significa "det fungerer bra ikke sant"?', options: ["Funciona bem, n\xE3o \xE9 verdade?", "\xC9 normal sentir assim, sabes.", "Devias estar orgulhoso, verdadeiramente.", "Escreve o exerc\xEDcio de respira\xE7\xE3o no telem\xF3vel."], answer: "Funciona bem, n\xE3o \xE9 verdade?", audio: "Det fungerer bra ikke sant" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "det er normalt \xE5 f\xF8le s\xE5nn vet du", pt: "\xC9 normal sentir assim, sabes." }, { no: "du b\xF8r v\xE6re stolt virkelig", pt: "Devias estar orgulhoso, verdadeiramente." }, { no: "skriv ned puste\xF8velsen p\xE5 telefonen", pt: "Escreve o exerc\xEDcio de respira\xE7\xE3o no telem\xF3vel." }, { no: "det fungerer bra ikke sant", pt: "Funciona bem, n\xE3o \xE9 verdade?" }] }
+    ]
+  },
+  {
+    id: "adv-9",
+    title: "Avan\xE7ado \u2014 parte 9",
+    color: "#991B1B",
+    tier: 3,
+    grammar: {
+      title: "Tempo composto com 'har'",
+      text: "'Har' + partic\xEDpio passado forma o pret\xE9rito perfeito: 'jeg har brukt' (eu usei/tenho usado)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "det er fin fremgang p\xE5 kort tid"?', options: ["\xC9 um bom progresso em pouco tempo.", "Conta at\xE9 quatro quando inspirares.", "\xC9 normal quando se tem medo.", "Aceita o sentimento, n\xE3o lutes contra ele."], answer: "\xC9 um bom progresso em pouco tempo.", audio: "Det er fin fremgang p\xE5 kort tid" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "tell til fire n\xE5r du puster inn", audio: "Tell til fire n\xE5r du puster inn", pt: "Conta at\xE9 quatro quando inspirares." },
+      { type: "arrange", prompt: 'Monte a frase: "\xC9 normal quando se tem medo."', answer: "Det er normalt n\xE5r man er redd", audio: "Det er normalt n\xE5r man er redd", pt: "\xC9 normal quando se tem medo." },
+      { type: "mc", prompt: 'O que significa "aksepter f\xF8lelsen ikke kjemp mot den"?', options: ["Aceita o sentimento, n\xE3o lutes contra ele.", "\xC9 um bom progresso em pouco tempo.", "Conta at\xE9 quatro quando inspirares.", "\xC9 normal quando se tem medo."], answer: "Aceita o sentimento, n\xE3o lutes contra ele.", audio: "Aksepter f\xF8lelsen ikke kjemp mot den" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "det er fin fremgang p\xE5 kort tid", pt: "\xC9 um bom progresso em pouco tempo." }, { no: "tell til fire n\xE5r du puster inn", pt: "Conta at\xE9 quatro quando inspirares." }, { no: "det er normalt n\xE5r man er redd", pt: "\xC9 normal quando se tem medo." }, { no: "aksepter f\xF8lelsen ikke kjemp mot den", pt: "Aceita o sentimento, n\xE3o lutes contra ele." }] }
+    ]
+  },
+  {
+    id: "adv-10",
+    title: "Avan\xE7ado \u2014 parte 10",
+    color: "#86198F",
+    tier: 3,
+    grammar: {
+      title: "Conjun\xE7\xE3o 'men' (mas)",
+      text: "'Men' liga duas ideias contrastantes: 'fremmed men hjelpsom' (estranho mas prest\xE1vel). N\xE3o muda a ordem das palavras."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "har du en plan for neste gang"?', options: ["Tens um plano para a pr\xF3xima vez?", "Eras um estranho, mas muito prest\xE1vel.", "Mudaste completamente a minha noite.", "\xC0s vezes os estranhos precisam de se ajudar uns aos outros."], answer: "Tens um plano para a pr\xF3xima vez?", audio: "Har du en plan for neste gang" },
+      { type: "translate", prompt: 'Traduza: "Eras um estranho, mas muito prest\xE1vel."', answer: "du var fremmed men veldig hjelpsom", audio: "Du var fremmed men veldig hjelpsom" },
+      { type: "arrange", prompt: 'Monte a frase: "Mudaste completamente a minha noite."', answer: "Du har forandret kvelden min helt", audio: "Du har forandret kvelden min helt", pt: "Mudaste completamente a minha noite." },
+      { type: "mc", prompt: 'O que significa "noen ganger trenger fremmede \xE5 hjelpe hverandre"?', options: ["\xC0s vezes os estranhos precisam de se ajudar uns aos outros.", "Tens um plano para a pr\xF3xima vez?", "Eras um estranho, mas muito prest\xE1vel.", "Mudaste completamente a minha noite."], answer: "\xC0s vezes os estranhos precisam de se ajudar uns aos outros.", audio: "Noen ganger trenger fremmede \xE5 hjelpe hverandre" },
+      { type: "match", prompt: "Associe as frases", pairs: [{ no: "har du en plan for neste gang", pt: "Tens um plano para a pr\xF3xima vez?" }, { no: "du var fremmed men veldig hjelpsom", pt: "Eras um estranho, mas muito prest\xE1vel." }, { no: "du har forandret kvelden min helt", pt: "Mudaste completamente a minha noite." }, { no: "noen ganger trenger fremmede \xE5 hjelpe hverandre", pt: "\xC0s vezes os estranhos precisam de se ajudar uns aos outros." }] }
+    ]
+  },
+  {
+    id: "questions1",
+    title: "Perguntas I",
+    color: "#0369A1",
+    tier: 1,
+    grammar: {
+      title: "Palavras interrogativas com 'hv-'",
+      text: "A maioria das palavras interrogativas em noruegu\xEAs come\xE7a com 'hv-': hva (o qu\xEA), hvem (quem), hvor (onde), hvordan (como)."
+    },
+    items: [
+      { type: "mc", prompt: 'O que significa "hva"?', options: ["O qu\xEA", "Quem", "Onde", "Como"], answer: "O qu\xEA", audio: "Hva" },
+      { type: "mc", prompt: '"Hvordan" significa:', options: ["Como", "Onde", "Quando", "Porqu\xEA"], answer: "Como", audio: "Hvordan" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "hvem", audio: "Hvem", pt: "Quem" },
+      { type: "arrange", prompt: 'Monte a frase: "Onde fica a esta\xE7\xE3o?"', answer: "Hvor ligger stasjonen", audio: "Hvor ligger stasjonen", pt: "Onde fica a esta\xE7\xE3o?" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "hva", pt: "O qu\xEA" }, { no: "hvordan", pt: "Como" }, { no: "hvem", pt: "Quem" }, { no: "hvor", pt: "Onde" }] }
+    ]
+  },
+  {
+    id: "questions2",
+    title: "Perguntas II \u2014 Quando vs. Porqu\xEA",
+    color: "#B91C1C",
+    tier: 1,
+    grammar: {
+      title: "'N\xE5r' vs 'Hvorfor'",
+      text: "'N\xE5r' pergunta sobre tempo (quando algo acontece): 'N\xE5r starter filmen?'. 'Hvorfor' pergunta sobre motivo (porqu\xEA): 'Hvorfor er du tr\xF8tt?'. N\xE3o trocar os dois!"
+    },
+    items: [
+      { type: "mc", prompt: '"N\xE5r starter filmen?" pergunta sobre:', options: ["Tempo (quando)", "Motivo (porqu\xEA)", "Lugar (onde)", "Pessoa (quem)"], answer: "Tempo (quando)", audio: "N\xE5r starter filmen?" },
+      { type: "mc", prompt: '"Hvorfor er du tr\xF8tt?" pergunta sobre:', options: ["Motivo (porqu\xEA)", "Tempo (quando)", "Lugar (onde)", "Modo (como)"], answer: "Motivo (porqu\xEA)", audio: "Hvorfor er du tr\xF8tt?" },
+      { type: "listen", prompt: "Ou\xE7a e escreva o que ouve em noruegu\xEAs", answer: "hvor gammel", audio: "Hvor gammel", pt: "Quantos anos (idade)" },
+      { type: "arrange", prompt: 'Monte a frase: "Quantos anos tens?"', answer: "Hvor gammel er du", audio: "Hvor gammel er du", pt: "Quantos anos tens?" },
+      { type: "match", prompt: "Associe as palavras", pairs: [{ no: "n\xE5r", pt: "Quando" }, { no: "hvorfor", pt: "Porqu\xEA" }, { no: "hvor gammel", pt: "Quantos anos" }, { no: "hvor mye", pt: "Quanto" }] }
+    ]
+  }
+];
+const TOTAL_HEARTS = 5;
+const STORAGE_KEY = "progress-v1";
+const CUSTOM_COLORS = ["#7F77DD", "#D4537E", "#0F6E56", "#BA7517", "#378ADD"];
+const DISTRACTOR_WORDS = ["og", "men", "eller", "kanskje", "alltid", "aldri", "her", "der", "litt", "veldig", "bare", "ogs\xE5", "snart", "igjen", "fort", "sent", "tidlig", "god", "d\xE5rlig", "noen"];
+const PT_DISTRACTOR_WORDS = ["e", "mas", "ou", "talvez", "sempre", "nunca", "aqui", "ali", "muito", "s\xF3", "tamb\xE9m", "agora", "r\xE1pido", "devagar", "bom", "mau", "outra", "vez", "hoje", "cedo"];
+const WORD_GLOSSARY = {
+  jeg: "eu",
+  du: "tu / voc\xEA",
+  han: "ele",
+  hun: "ela",
+  vi: "n\xF3s",
+  de: "eles/elas",
+  meg: "me / mim",
+  deg: "te / ti",
+  oss: "nos",
+  er: "\xE9 / est\xE1 / sou",
+  var: "era / estava",
+  vil: "quer / vai (futuro)",
+  skal: "vai / deve",
+  kan: "pode",
+  m\u00E5: "tem de",
+  har: "tem",
+  det: "isso / aquilo",
+  denne: "este/esta",
+  den: "esse/essa",
+  en: "um/uma",
+  et: "um/uma (neutro)",
+  ja: "sim",
+  nei: "n\xE3o",
+  ikke: "n\xE3o (nega\xE7\xE3o)",
+  n\u00E5: "agora",
+  her: "aqui",
+  der: "ali",
+  i: "em",
+  p\u00E5: "em / no",
+  til: "para",
+  med: "com",
+  for: "para / por",
+  fra: "de",
+  om: "sobre / se",
+  n\u00E5r: "quando",
+  og: "e",
+  men: "mas",
+  eller: "ou",
+  takk: "obrigado",
+  v\u00E6r: "seja / esteja",
+  snill: "gentil (v\xE6r s\xE5 snill = por favor)",
+  ha: "ter / tenha",
+  bra: "bom / bem",
+  godt: "bom / bem",
+  d\u00E5rlig: "mau",
+  mye: "muito",
+  litt: "um pouco",
+  veldig: "muito (intensificador)",
+  helt: "completamente",
+  sammen: "juntos",
+  alene: "sozinho",
+  min: "meu/minha",
+  din: "teu/tua",
+  sin: "seu/sua (reflexivo)",
+  hva: "o que",
+  hvor: "onde",
+  hvem: "quem",
+  hvorfor: "por que",
+  \u00E5: "(marcador de infinitivo)",
+  ut: "para fora",
+  inn: "para dentro",
+  dag: "dia",
+  kveld: "noite",
+  morgen: "manh\xE3",
+  puster: "respira",
+  puste: "respirar",
+  jobber: "trabalha",
+  jobbe: "trabalhar",
+  finner: "encontra",
+  ser: "v\xEA",
+  vet: "sabe",
+  heter: "chama-se",
+  s\u00F8ker: "procura",
+  huske: "lembrar",
+  prate: "conversar",
+  v\u00E6re: "ser/estar",
+  kroppen: "o corpo",
+  roligere: "mais calmo",
+  faktisk: "na verdade",
+  enn\u00E5: "ainda",
+  toget: "o comboio",
+  bagasje: "bagagem",
+  kaffe: "caf\xE9",
+  tusen: "mil",
+  mest: "mais (superlativo)",
+  relevant: "relevante",
+  redd: "com medo"
+};
+function wordGloss(word) {
+  const clean = word.toLowerCase().replace(/[.,!?]/g, "");
+  return WORD_GLOSSARY[clean] || null;
+}
+function speak(text, rate) {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const voices = synth.getVoices();
+    const noVoice = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("nb")) || voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("no"));
+    if (noVoice) utter.voice = noVoice;
+    utter.lang = "nb-NO";
+    utter.rate = rate || 0.9;
+    synth.speak(utter);
+  } catch (e) {
+  }
+}
+function playTone(kind) {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    if (kind === "correct") {
+      o.frequency.setValueAtTime(523.25, ctx.currentTime);
+      o.frequency.setValueAtTime(659.25, ctx.currentTime + 0.09);
+    } else {
+      o.frequency.setValueAtTime(220, ctx.currentTime);
+      o.frequency.setValueAtTime(160, ctx.currentTime + 0.12);
+    }
+    g.gain.setValueAtTime(0.16, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(1e-3, ctx.currentTime + 0.32);
+    o.start();
+    o.stop(ctx.currentTime + 0.32);
+  } catch (e) {
+  }
+}
+function normalize(s) {
+  return s.toLowerCase().trim().replace(/[.,!?]/g, "").replace(/\s+/g, " ");
+}
+function extractYouTubeId(url) {
+  const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+}
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function extractVocabPairs(lesson) {
+  const pairs = [];
+  lesson.items.forEach((it) => {
+    if (it.type === "match") {
+      it.pairs.forEach((p) => pairs.push({ no: p.no, pt: p.pt }));
+    } else if ((it.type === "translate" || it.type === "arrange" || it.type === "listen") && it.answer && it.pt) {
+      pairs.push({ no: it.answer, pt: it.pt });
+    } else if (it.type === "mc" && it.audio && it.answer) {
+      pairs.push({ no: it.audio, pt: it.answer });
+    }
+  });
+  const seen = /* @__PURE__ */ new Set();
+  return pairs.filter((p) => {
+    const k = p.no.toLowerCase();
+    if (!p.no || p.no.split(" ").length > 3 || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+function typeAccuracy(stats, type) {
+  const s = stats[type];
+  if (!s || s.total < 3) return 0.5;
+  return s.correct / s.total;
+}
+const GRAMMAR_QUIZZES = {
+  "Verbos modais": { prompt: "Qual frase est\xE1 correta?", options: ["Jeg kan hjelpe", "Jeg kan \xE5 hjelpe", "Jeg hjelpe kan", "Jeg kan hjelper"], answer: "Jeg kan hjelpe" },
+  "Conjun\xE7\xE3o 'n\xE5r' (quando)": { prompt: "Qual conjun\xE7\xE3o significa 'quando'?", options: ["n\xE5r", "men", "og", "at"], answer: "n\xE5r" },
+  "Conjun\xE7\xE3o 'men' (mas)": { prompt: "Qual conjun\xE7\xE3o significa 'mas'?", options: ["men", "og", "n\xE5r", "at"], answer: "men" },
+  "Tempo composto com 'har'": { prompt: "Como se forma o pret\xE9rito perfeito?", options: ["har + partic\xEDpio", "skal + infinitivo", "var + adjetivo", "kan + infinitivo"], answer: "har + partic\xEDpio" },
+  "Perguntas com invers\xE3o": { prompt: "Qual \xE9 a pergunta correta?", options: ["Er du redd?", "Du er redd?", "Du redd er?", "Redd er du?"], answer: "Er du redd?" },
+  "Pronomes pessoais": { prompt: "Como se diz 'eu'?", options: ["jeg", "du", "han", "vi"], answer: "jeg" },
+  "Adv\xE9rbio 'n\xE5' (agora)": { prompt: "O que significa 'n\xE5'?", options: ["Agora", "Ontem", "Amanh\xE3", "Sempre"], answer: "Agora" },
+  "Palavra 'det' (isso/aquilo)": { prompt: "'Det er godt' significa:", options: ["\xC9 bom", "Isto \xE9 ruim", "Aquilo \xE9 grande", "\xC9 tarde"], answer: "\xC9 bom" },
+  "Reflexivos": { prompt: "Complete: 'Jeg slapper ___ n\xE5' (Eu relaxo agora)", options: ["av", "meg", "deg", "seg"], answer: "av" },
+  "Adv\xE9rbios de grau": { prompt: "'Veldig viktig' significa:", options: ["Muito importante", "Pouco importante", "Nada importante", "Mais importante"], answer: "Muito importante" },
+  "Ora\xE7\xF5es subordinadas com 'at'": { prompt: "Qual palavra introduz 'eu acho que...'?", options: ["at", "n\xE5r", "men", "om"], answer: "at" },
+  "Comparativos": { prompt: "Qual \xE9 o comparativo de 'calmo' (rolig)?", options: ["roligere", "rolig", "roligst", "roligt"], answer: "roligere" },
+  "'En' e 'ett'": { prompt: "Qual artigo \xE9 usado com 'hus' (casa, neutro)?", options: ["et", "en", "den", "det"], answer: "et" },
+  "Artigos indefinidos": { prompt: "Qual \xE9 o artigo indefinido para 'kaffe' (comum)?", options: ["en", "et", "den", "ei"], answer: "en" },
+  "Concord\xE2ncia de adjetivos": { prompt: "Qual \xE9 a forma neutra de 'r\xF8d' (vermelho)?", options: ["r\xF8dt", "r\xF8de", "r\xF8d", "r\xF8dere"], answer: "r\xF8dt" },
+  "Sobre sauda\xE7\xF5es": { prompt: "Qual cumprimento \xE9 mais informal?", options: ["Hei", "God dag", "God morgen", "Farvel"], answer: "Hei" },
+  "Posse com 'min / mi / mitt'": { prompt: "Qual forma de 'meu' se usa com 'barn' (neutro)?", options: ["mitt", "min", "mi", "mine"], answer: "mitt" },
+  "Preposi\xE7\xF5es de lugar": { prompt: "Qual preposi\xE7\xE3o significa 'em/dentro de'?", options: ["i", "p\xE5", "til", "fra"], answer: "i" },
+  "'Det er' para descrever o clima": { prompt: "Como se diz 'est\xE1 frio'?", options: ["Det er kaldt", "Det kaldt er", "Kaldt er det", "Er det kaldt"], answer: "Det er kaldt" },
+  "G\xEAnero das roupas": { prompt: "Qual artigo usa 'jakke' (jaqueta, comum)?", options: ["en", "et", "den", "det"], answer: "en" },
+  "Meios de transporte com 'med'": { prompt: "Como se diz 'de trem'?", options: ["med tog", "p\xE5 tog", "i tog", "til tog"], answer: "med tog" },
+  "'Litt' (um pouco)": { prompt: "'Litt redd' significa:", options: ["Um pouco assustado", "Muito assustado", "Nada assustado", "Sempre assustado"], answer: "Um pouco assustado" },
+  "Pergunta com 'hvor mye' (quanto)": { prompt: "Como se pergunta 'quanto custa'?", options: ["Hvor mye koster det?", "Hva er det?", "Hvor er det?", "N\xE5r er det?"], answer: "Hvor mye koster det?" },
+  "Verbo '\xE5 like' + infinitivo": { prompt: "Complete: 'Jeg liker ___ lese' (Eu gosto de ler)", options: ["\xE5", "\xE5 ha", "til", "for"], answer: "\xE5" },
+  "Passado de '\xE5 f\xE5' (receber)": { prompt: "Qual \xE9 o passado de '\xE5 f\xE5' (receber)?", options: ["fikk", "f\xE5r", "f\xE5tt", "fikke"], answer: "fikk" },
+  "Verbos no infinitivo": { prompt: "Qual marca o infinitivo?", options: ["\xE5", "en", "det", "til"], answer: "\xE5" },
+  "Definido com sufixo '-et'": { prompt: "Como se diz 'o comboio' (definido)?", options: ["toget", "tog", "et tog", "togen"], answer: "toget" },
+  "'\xC5 g\xE5 en tur' (dar um passeio)": { prompt: "'G\xE5 en tur' significa:", options: ["Dar um passeio", "Correr r\xE1pido", "Ficar em casa", "Voltar a p\xE9"], answer: "Dar um passeio" },
+  "Partes do corpo com sufixo definido": { prompt: "Como se diz 'a cabe\xE7a' (definido)?", options: ["hodet", "hode", "et hode", "hoder"], answer: "hodet" },
+  "Lugares sem artigo": { prompt: "Complete: 'Jeg bor ___ Oslo' (Eu moro em Oslo)", options: ["i", "en", "et", "p\xE5"], answer: "i" },
+  "'Siden' (atr\xE1s / desde)": { prompt: "'Dager siden' significa:", options: ["Dias atr\xE1s", "Dias \xE0 frente", "Todo dia", "Hoje"], answer: "Dias atr\xE1s" },
+  "'I morgen' (amanh\xE3)": { prompt: "'I morgen' significa:", options: ["Amanh\xE3", "Manh\xE3", "Ontem", "Hoje"], answer: "Amanh\xE3" },
+  "'Regning' (conta / fatura)": { prompt: "'Regning' significa:", options: ["Conta / fatura", "Conta banc\xE1ria", "Dinheiro", "Recibo"], answer: "Conta / fatura" },
+  "'Og' para ligar categorias": { prompt: "Como se diz 'sa\xFAde e cuidados'?", options: ["helse og omsorg", "helse men omsorg", "helse at omsorg", "helse p\xE5 omsorg"], answer: "helse og omsorg" },
+  "Sufixo '-er' para profiss\xF5es": { prompt: "'Selger' vem do verbo:", options: ["\xE5 selge (vender)", "\xE5 kj\xF8pe (comprar)", "\xE5 hjelpe (ajudar)", "\xE5 l\xE6re (ensinar)"], answer: "\xE5 selge (vender)" },
+  "Palavras compostas": { prompt: "'S\xF8knadsfrist' \xE9 formado por:", options: ["s\xF8knad + frist", "s\xF8k + nad", "s\xF8 + knadsfrist", "s\xF8knads + rist"], answer: "s\xF8knad + frist" },
+  "Plural em '-er'": { prompt: "Qual \xE9 o plural de 'resultat'?", options: ["resultater", "resultat", "resultats", "resultatene"], answer: "resultater" },
+  "Verbo '\xE5 hete' (chamar-se)": { prompt: "Como se diz 'eu me chamo'?", options: ["Jeg heter", "Jeg er", "Jeg har", "Jeg het"], answer: "Jeg heter" },
+  "Verbo '\xE5 m\xE5tte' (dever / ter de)": { prompt: "Qual \xE9 o presente de '\xE5 m\xE5tte'?", options: ["m\xE5", "kan", "skal", "vil"], answer: "m\xE5" },
+  "Adjetivos antes do substantivo": { prompt: "Onde vai o adjetivo em 'um emprego fixo'?", options: ["en fast jobb", "en jobb fast", "fast en jobb", "jobb en fast"], answer: "en fast jobb" },
+  "Verbo '\xE5 legge ved' (anexar)": { prompt: "'Legge ved' significa:", options: ["Anexar", "Enviar", "Apagar", "Assinar"], answer: "Anexar" },
+  "'Vakt' (turno / guarda)": { prompt: "'Nattevakt' significa:", options: ["Turno da noite", "Turno da manh\xE3", "Guarda diurno", "Seguran\xE7a"], answer: "Turno da noite" },
+  "'Vi s\xF8ker' (procuramos)": { prompt: "'Vi s\xF8ker' significa:", options: ["Procuramos", "Oferecemos", "Pagamos", "Vendemos"], answer: "Procuramos" },
+  "'\xC5 ha' (ter)": { prompt: "Como se diz 'eu tenho'?", options: ["Jeg har", "Jeg er", "Jeg vil", "Jeg skal"], answer: "Jeg har" },
+  "Ordem das palavras": { prompt: "Qual ordem \xE9 a correta em noruegu\xEAs (afirma\xE7\xE3o)?", options: ["Sujeito-Verbo-Objeto", "Objeto-Sujeito-Verbo", "Verbo-Sujeito-Objeto", "Objeto-Verbo-Sujeito"], answer: "Sujeito-Verbo-Objeto" },
+  "Imperativo em bot\xF5es": { prompt: "'S\xF8k' num bot\xE3o significa:", options: ["Procurar!", "Procurado", "Procura-se", "Procurando"], answer: "Procurar!" },
+  "Palavras compostas em cargos": { prompt: "'Butikksjef' \xE9 formado por:", options: ["butikk + sjef", "but + ikksjef", "butikks + jef", "bu + tikksjef"], answer: "butikk + sjef" },
+  "Substantivos compostos com 's\xF8knad'": { prompt: "'Jobbs\xF8knad' significa:", options: ["Candidatura de emprego", "Entrevista de emprego", "Oferta de emprego", "Contrato de emprego"], answer: "Candidatura de emprego" },
+  "Pedidos educados": { prompt: "Qual \xE9 a forma mais educada de pedir?", options: ["Jeg vil gjerne...", "Jeg vil ha...", "Gi meg...", "Jeg skal ha..."], answer: "Jeg vil gjerne..." },
+  "Substantivos definidos + posse": { prompt: "Como se diz 'a minha candidatura'?", options: ["s\xF8knaden min", "min s\xF8knaden", "s\xF8knad min", "min s\xF8knad"], answer: "s\xF8knaden min" },
+  "Adv\xE9rbios de tempo em an\xFAncios": { prompt: "'Publisert' significa:", options: ["Publicado", "Fechado", "Pago", "Urgente"], answer: "Publicado" },
+  "Superlativo com '-est'": { prompt: "Qual \xE9 o superlativo de 'perto' (n\xE6r)?", options: ["n\xE6rmest", "n\xE6rmere", "n\xE6r", "n\xE6rest"], answer: "n\xE6rmest" },
+  "Sufixo '-ansvarlig' (respons\xE1vel por)": { prompt: "'-ansvarlig' no fim de uma palavra significa:", options: ["Respons\xE1vel por", "Interessado em", "Trabalhador de", "Especialista em"], answer: "Respons\xE1vel por" },
+  "Adjetivo 'forberedt'": { prompt: "'Forberedt' significa:", options: ["Preparado", "Cansado", "Nervoso", "Atrasado"], answer: "Preparado" },
+  "Adv\xE9rbio 'litt' (um pouco)": { prompt: "'Hjelpe litt' significa:", options: ["Ajudar um pouco", "Ajudar muito", "N\xE3o ajudar", "Ajudar sempre"], answer: "Ajudar um pouco" },
+  "Palavra 'sammen' (juntos)": { prompt: "'Sammen' significa:", options: ["Juntos", "Sozinho", "R\xE1pido", "Devagar"], answer: "Juntos" }
+};
+function injectGrammarCheck(lesson) {
+  const quiz = GRAMMAR_QUIZZES[lesson.grammar && lesson.grammar.title];
+  if (!quiz) return lesson;
+  const checkItem = {
+    type: "mc",
+    prompt: quiz.prompt,
+    options: shuffle(quiz.options),
+    answer: quiz.answer,
+    audio: "",
+    grammarCheck: true
+  };
+  return { ...lesson, items: [...lesson.items, checkItem] };
+}
+function buildReviewQuestion(pool, exerciseStats) {
+  if (pool.length < 4) return null;
+  const idx = Math.floor(Math.random() * pool.length);
+  const pick = pool[idx];
+  const others = pool.filter((_, i) => i !== idx);
+  const mcAcc = typeAccuracy(exerciseStats, "mc");
+  const translateAcc = typeAccuracy(exerciseStats, "translate");
+  const pickTranslate = translateAcc < mcAcc ? Math.random() < 0.7 : Math.random() < 0.3;
+  if (!pickTranslate) {
+    const distractors = shuffle(others.filter((p) => p.pt !== pick.pt)).slice(0, 3).map((p) => p.pt);
+    if (distractors.length < 3) return { type: "translate", prompt: `Traduza: "${pick.pt}"`, answer: pick.no, audio: pick.no, review: true };
+    return {
+      type: "mc",
+      prompt: `O que significa "${pick.no}"?`,
+      options: shuffle([pick.pt, ...distractors]),
+      answer: pick.pt,
+      audio: pick.no,
+      review: true
+    };
+  }
+  return { type: "translate", prompt: `Traduza: "${pick.pt}"`, answer: pick.no, audio: pick.no, review: true };
+}
+function augmentMatchItems(lesson, precedingLessons, exerciseStats) {
+  const priorPool = [];
+  precedingLessons.forEach((l) => priorPool.push(...extractVocabPairs(l)));
+  const augmentedItems = lesson.items.map((it) => {
+    if (it.type !== "match") return it;
+    const ownKeys = new Set(it.pairs.map((p) => p.no.toLowerCase()));
+    const target = Math.random() < 0.5 ? 6 : 8;
+    const needed = Math.max(0, target - it.pairs.length);
+    const filler = shuffle(priorPool.filter((p) => !ownKeys.has(p.no.toLowerCase()))).slice(0, needed);
+    return { ...it, pairs: shuffle([...it.pairs, ...filler]) };
+  });
+  const reviewQuestion = buildReviewQuestion(priorPool, exerciseStats || {});
+  const items = reviewQuestion ? [...augmentedItems, reviewQuestion] : augmentedItems;
+  return { ...lesson, items };
+}
+function buildExercisesFromPairs(pairs) {
+  const items = [];
+  for (let i = 0; i < 5; i++) {
+    const pair = pairs[i % pairs.length];
+    const others = pairs.filter((p) => p.no !== pair.no);
+    const distractors = shuffle(others).slice(0, 3).map((p) => p.pt);
+    const canMc = distractors.length === 3;
+    if (canMc && i % 2 === 0) {
+      items.push({
+        type: "mc",
+        prompt: `O que significa "${pair.no}"?`,
+        options: shuffle([pair.pt, ...distractors]),
+        answer: pair.pt,
+        audio: pair.no
+      });
+    } else {
+      items.push({ type: "translate", prompt: `Traduza: "${pair.pt}"`, answer: pair.no, audio: pair.no });
+    }
+  }
+  return items;
+}
+function dateStr(d) {
+  return d.toISOString().slice(0, 10);
+}
+const SR_INTERVALS = [0, 1, 3, 7, 16];
+function addDays(baseDateStr, days) {
+  const d = new Date(baseDateStr);
+  d.setDate(d.getDate() + days);
+  return dateStr(d);
+}
+async function loadState() {
+  try {
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if (res && res.value) return JSON.parse(res.value);
+  } catch (e) {
+  }
+  return null;
+}
+async function saveState(state) {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+  } catch (e) {
+  }
+}
+function Puffin({ size = 40 }) {
+  return /* @__PURE__ */ React.createElement("svg", { width: size, height: size, viewBox: "0 0 40 40", role: "img", "aria-label": "Mascote lundi" }, /* @__PURE__ */ React.createElement("ellipse", { cx: "20", cy: "24", rx: "12", ry: "13", fill: "var(--text-primary)" }), /* @__PURE__ */ React.createElement("ellipse", { cx: "20", cy: "28", rx: "8", ry: "8", fill: "var(--bg-page)" }), /* @__PURE__ */ React.createElement("circle", { cx: "15", cy: "18", r: "2.4", fill: "var(--bg-page)" }), /* @__PURE__ */ React.createElement("circle", { cx: "25", cy: "18", r: "2.4", fill: "var(--bg-page)" }), /* @__PURE__ */ React.createElement("circle", { cx: "15", cy: "18.5", r: "1.2", fill: "var(--text-primary)" }), /* @__PURE__ */ React.createElement("circle", { cx: "25", cy: "18.5", r: "1.2", fill: "var(--text-primary)" }), /* @__PURE__ */ React.createElement("path", { d: "M12 21 L20 24 L12 26 Z", fill: "#D85A30" }), /* @__PURE__ */ React.createElement("path", { d: "M28 21 L20 24 L28 26 Z", fill: "#D85A30" }), /* @__PURE__ */ React.createElement("path", { d: "M17 24 L23 24 L20 27 Z", fill: "#EF9F27" }));
+}
+function MascotBubble({ message }) {
+  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 16 } }, /* @__PURE__ */ React.createElement(Puffin, { size: 40 }), /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        flex: 1,
+        background: "var(--bg-page)",
+        borderRadius: 12,
+        padding: "8px 12px",
+        fontSize: 13,
+        color: "var(--text-secondary)"
+      }
+    },
+    message
+  ));
+}
+function HeartsBar({ hearts }) {
+  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 4 } }, Array.from({ length: TOTAL_HEARTS }).map((_, i) => /* @__PURE__ */ React.createElement(
+    "i",
+    {
+      key: i,
+      className: i < hearts ? "ti ti-heart-filled" : "ti ti-heart",
+      style: { fontSize: 20, color: i < hearts ? "#F87171" : "var(--text-muted)" },
+      "aria-hidden": "true"
+    }
+  )));
+}
+function ProgressBar({ pct, color }) {
+  return /* @__PURE__ */ React.createElement("div", { style: { width: "100%", height: 10, borderRadius: 999, background: "var(--bg-page)", overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { width: `${pct}%`, height: "100%", background: color, transition: "width 300ms ease", borderRadius: 999 } }));
+}
+function StreakBadge({ streak }) {
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        background: "#7F1D1D",
+        color: "#F87171",
+        padding: "6px 10px",
+        borderRadius: "10px",
+        fontSize: 13,
+        fontWeight: 500
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-flame", style: { fontSize: 15 }, "aria-hidden": "true" }),
+    streak
+  );
+}
+const DAILY_GOAL = 30;
+function TopBar({ streak, xp, hearts, showHearts, dailyXp, onOpenSettings }) {
+  const pct = Math.min(100, Math.round(dailyXp / DAILY_GOAL * 100));
+  return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "10px 2px 10px"
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React.createElement(Puffin, { size: 28 }), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 15 } }, "Norsk")),
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, color: "#FF9600", fontWeight: 700, fontSize: 14 } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-flame", style: { fontSize: 18 }, "aria-hidden": "true" }), streak), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, color: "#1CB0F6", fontWeight: 700, fontSize: 14 } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-diamond", style: { fontSize: 17 }, "aria-hidden": "true" }), xp), showHearts && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, color: "#FF4B4B", fontWeight: 700, fontSize: 14 } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-heart-filled", style: { fontSize: 17 }, "aria-hidden": "true" }), hearts), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        onClick: onOpenSettings,
+        "aria-label": "Defini\xE7\xF5es de tema",
+        style: { width: 28, height: 28, borderRadius: "50%", border: "0.5px solid var(--border-strong)", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center" }
+      },
+      /* @__PURE__ */ React.createElement("i", { className: "ti ti-palette", style: { fontSize: 15 }, "aria-hidden": "true" })
+    ))
+  ), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "0 2px 10px", borderBottom: "0.5px solid var(--border)" } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-target-arrow", style: { fontSize: 14, color: "var(--text-muted)" }, "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, height: 8, borderRadius: 999, background: "var(--border)", overflow: "hidden" } }, /* @__PURE__ */ React.createElement("div", { style: { width: `${pct}%`, height: "100%", background: "#1CB0F6", borderRadius: 999 } })), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: "var(--text-muted)", fontWeight: 600, flexShrink: 0 } }, Math.min(dailyXp, DAILY_GOAL), "/", DAILY_GOAL, " XP hoje")));
+}
+function GameStyles() {
+  return /* @__PURE__ */ React.createElement("style", null, `
+button, .ti { color: inherit; }
+i.ti { color: var(--text-primary); }
+.chunky-btn {
+  border: none;
+  border-bottom: 4px solid var(--btn-border, #0F6E56);
+  background: var(--btn-bg, #1D9E75);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 16px;
+  padding: 14px;
+  width: 100%;
+  font-size: 15px;
+  cursor: pointer;
+}
+.chunky-btn:active { transform: translateY(3px); border-bottom-width: 1px; }
+.chunky-btn:disabled { opacity: 0.5; }
+.chunky-btn-outline {
+  border: none;
+  border-bottom: 4px solid var(--border-stronger);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 700;
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.chunky-btn-outline:active { transform: translateY(3px); border-bottom-width: 1px; }
+.lesson-node {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.lesson-node:active:not(:disabled) { transform: translateY(3px); border-bottom-width: 2px !important; }
+.lesson-node:disabled { cursor: default; }
+`);
+}
+const XPOS = ["center", "flex-end", "center", "flex-start"];
+function darken(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.max(0, (n >> 16) - amt);
+  const g = Math.max(0, (n >> 8 & 255) - amt);
+  const b = Math.max(0, (n & 255) - amt);
+  return `rgb(${r},${g},${b})`;
+}
+function hexToHue(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16 & 255) / 255;
+  const g = (n >> 8 & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === r) h = (g - b) / d % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+  }
+  return h;
+}
+function hueToPreviewHex(hue) {
+  return `hsl(${hue}, 55%, 50%)`;
+}
+function hueToHex(hue) {
+  const s = 0.55, l = 0.5;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(hue / 60 % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (hue < 60) {
+    r = c;
+    g = x;
+    b = 0;
+  } else if (hue < 120) {
+    r = x;
+    g = c;
+    b = 0;
+  } else if (hue < 180) {
+    r = 0;
+    g = c;
+    b = x;
+  } else if (hue < 240) {
+    r = 0;
+    g = x;
+    b = c;
+  } else if (hue < 300) {
+    r = x;
+    g = 0;
+    b = c;
+  } else {
+    r = c;
+    g = 0;
+    b = x;
+  }
+  const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+function computeTheme(hue, lightness) {
+  const L = Math.max(6, Math.min(70, lightness));
+  const clamp = (v) => Math.min(94, v);
+  const dark = L < 45;
+  return {
+    "--bg-page": `hsl(${hue}, 22%, ${L}%)`,
+    "--bg-card": `hsl(${hue}, 18%, ${clamp(L + 7)}%)`,
+    "--bg-chip": `hsl(${hue}, 16%, ${clamp(L + 14)}%)`,
+    "--border": `hsl(${hue}, 14%, ${clamp(L + 18)}%)`,
+    "--border-strong": `hsl(${hue}, 14%, ${clamp(L + 24)}%)`,
+    "--border-stronger": `hsl(${hue}, 14%, ${clamp(L + 30)}%)`,
+    "--text-primary": dark ? "#F1EFE8" : "#20201D",
+    "--text-secondary": dark ? "hsl(0, 0%, 75%)" : "hsl(0, 0%, 35%)",
+    "--text-muted": dark ? "hsl(0, 0%, 60%)" : "hsl(0, 0%, 48%)"
+  };
+}
+const TIER_NAMES = { 1: "Iniciante", 2: "Intermedi\xE1rio", 3: "Avan\xE7ado" };
+const TIER_COLORS = { 1: "#166534", 2: "#FCD34D", 3: "#7E22CE" };
+function SectionBanner({ label, color }) {
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        background: color,
+        color: "#fff",
+        borderRadius: 12,
+        padding: "12px 16px",
+        margin: "4px 16px 20px",
+        fontSize: 12,
+        fontWeight: 700,
+        letterSpacing: 0.6,
+        textAlign: "center"
+      }
+    },
+    label
+  );
+}
+function LessonMap({ lessons, progress, onSelect, onCreateClick, onReset, checkpointsPassed, checkpointDates }) {
+  const firstActiveIdx = lessons.findIndex((l, idx) => {
+    const done = progress[l.id]?.completed || 0;
+    if (done >= l.items.length) return false;
+    const prev = lessons[idx - 1];
+    const tierLocked = l.tier && l.tier > 1 && !checkpointsPassed[l.tier - 1];
+    const sequentialLocked = !l.custom && idx > 0 && prev && !prev.custom && (!l.tier || prev.tier === l.tier) && (progress[prev.id]?.completed || 0) < prev.items.length;
+    return !(l.custom || l.special === "checkpoint" ? false : tierLocked || sequentialLocked);
+  });
+  return /* @__PURE__ */ React.createElement("div", { style: { padding: "0 0 0.5rem" } }, /* @__PURE__ */ React.createElement(MascotBubble, { message: "Hei! Vamos praticar um pouco de noruegu\xEAs hoje?" }), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: onCreateClick,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        textAlign: "left",
+        width: "100%",
+        padding: "14px 16px",
+        background: "transparent",
+        border: "0.5px dashed var(--border-strong)",
+        borderRadius: 12,
+        marginBottom: 24
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { width: 44, height: 44, borderRadius: "50%", background: "var(--bg-page)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-brand-youtube", style: { fontSize: 20, color: "var(--text-secondary)" }, "aria-hidden": "true" })),
+    /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { fontWeight: 500, fontSize: 15, margin: 0 } }, "Nova li\xE7\xE3o a partir de v\xEDdeo"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--text-secondary)", margin: "2px 0 0" } }, "Cole um link do YouTube"))
+  ), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 28 } }, lessons.map((lesson, idx) => {
+    const done = progress[lesson.id]?.completed || 0;
+    const total = lesson.items.length;
+    const complete = done >= total;
+    const prev = lessons[idx - 1];
+    const tierLocked = lesson.tier && lesson.tier > 1 && !checkpointsPassed[lesson.tier - 1];
+    const sequentialLocked = !lesson.custom && idx > 0 && prev && !prev.custom && (!lesson.tier || prev.tier === lesson.tier) && (progress[prev.id]?.completed || 0) < prev.items.length;
+    const locked = !lesson.custom && lesson.special !== "checkpoint" && (tierLocked || sequentialLocked);
+    const isNext = idx === firstActiveIdx;
+    const isStaleCheckpoint = lesson.special === "checkpoint" && checkpointsPassed[lesson.tier] && checkpointDates[lesson.tier] && (/* @__PURE__ */ new Date() - new Date(checkpointDates[lesson.tier])) / 864e5 > 21;
+    const sectionLabel = lesson.tier && (idx === 0 || !prev || prev.tier !== lesson.tier) ? `N\xCDVEL ${lesson.tier} \xB7 ${TIER_NAMES[lesson.tier].toUpperCase()}` : lesson.custom && !lesson.special && (!prev || !prev.custom || prev.special === "review") ? "SEC\xC7\xC3O EXTRA \xB7 As suas li\xE7\xF5es" : null;
+    return /* @__PURE__ */ React.createElement(React.Fragment, { key: lesson.id }, sectionLabel && /* @__PURE__ */ React.createElement(SectionBanner, { label: sectionLabel, color: lesson.color }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: XPOS[idx % XPOS.length], padding: "0 16px" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6 } }, isNext && /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        style: {
+          background: "#fff",
+          color: lesson.color,
+          border: `0.5px solid ${lesson.color}`,
+          fontSize: 11,
+          fontWeight: 700,
+          padding: "4px 10px",
+          borderRadius: 999,
+          textTransform: "uppercase",
+          letterSpacing: 0.4
+        }
+      },
+      "Come\xE7ar"
+    ), isStaleCheckpoint && /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        style: {
+          background: "#78350F",
+          color: "#FCD34D",
+          fontSize: 10,
+          fontWeight: 700,
+          padding: "3px 9px",
+          borderRadius: 999,
+          textTransform: "uppercase",
+          letterSpacing: 0.3
+        }
+      },
+      "Refor\xE7a este teste"
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "lesson-node",
+        onClick: () => !locked && onSelect(lesson.id),
+        disabled: locked,
+        style: {
+          background: locked ? "var(--bg-page)" : lesson.color,
+          borderBottom: locked ? "4px solid var(--border-stronger)" : `4px solid ${darken(lesson.color, 45)}`,
+          opacity: locked ? 0.6 : 1
+        }
+      },
+      /* @__PURE__ */ React.createElement(
+        "i",
+        {
+          className: locked ? "ti ti-lock" : lesson.special === "review" ? "ti ti-refresh" : lesson.special === "checkpoint" ? isStaleCheckpoint ? "ti ti-alert-triangle" : "ti ti-trophy" : complete ? "ti ti-check" : "ti ti-star",
+          style: { fontSize: 26, color: locked ? "var(--text-muted)" : "#fff" },
+          "aria-hidden": "true"
+        }
+      )
+    ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, fontWeight: 500, margin: 0, textAlign: "center", maxWidth: 76 } }, lesson.title))));
+  })), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: onReset,
+      style: { marginTop: 28, width: "100%", padding: "8px", background: "transparent", border: "none", fontSize: 12, color: "var(--text-muted)" }
+    },
+    "Reiniciar progresso"
+  ));
+}
+function MatchExercise({ item, onLoseHeart, onDone }) {
+  const [rightOrder] = useState(() => shuffle(item.pairs.map((p) => p.pt)));
+  const [matched, setMatched] = useState([]);
+  const [selectedLeft, setSelectedLeft] = useState(null);
+  const [wrongPt, setWrongPt] = useState(null);
+  const [hadMistake, setHadMistake] = useState(false);
+  function pickRight(pt) {
+    if (!selectedLeft || matched.includes(selectedLeft)) return;
+    const pair = item.pairs.find((p) => p.no === selectedLeft);
+    if (pair.pt === pt) {
+      playTone("correct");
+      const next = [...matched, selectedLeft];
+      setMatched(next);
+      setSelectedLeft(null);
+      if (next.length === item.pairs.length) setTimeout(() => onDone(hadMistake), 350);
+    } else {
+      playTone("wrong");
+      setHadMistake(true);
+      onLoseHeart();
+      setWrongPt(pt);
+      setSelectedLeft(null);
+      setTimeout(() => setWrongPt(null), 400);
+    }
+  }
+  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", gap: 8 } }, item.pairs.map((p) => {
+    const isMatched = matched.includes(p.no);
+    const isSelected = selectedLeft === p.no;
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: p.no,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderRadius: 10,
+          border: isMatched ? "0.5px solid #4ADE80" : isSelected ? "0.5px solid #7DB8F5" : "0.5px solid var(--border)",
+          background: isMatched ? "#14532D" : isSelected ? "#1E3A5F" : "var(--bg-card)",
+          opacity: isMatched ? 0.6 : 1
+        }
+      },
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          onClick: () => !isMatched && setSelectedLeft(p.no),
+          disabled: isMatched,
+          style: { flex: 1, textAlign: "left", padding: "10px 4px 10px 8px", border: "none", background: "transparent", fontSize: 13 }
+        },
+        p.no
+      ),
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          onClick: () => speak(p.no),
+          "aria-label": "Ouvir palavra",
+          style: { width: 24, height: 24, marginRight: 6, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }
+        },
+        /* @__PURE__ */ React.createElement("i", { className: "ti ti-volume", style: { fontSize: 12 }, "aria-hidden": "true" })
+      )
+    );
+  })), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", gap: 8 } }, rightOrder.map((pt) => {
+    const isMatched = item.pairs.some((p) => p.pt === pt && matched.includes(p.no));
+    const isWrong = wrongPt === pt;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: pt,
+        onClick: () => pickRight(pt),
+        disabled: isMatched,
+        style: {
+          padding: "10px 8px",
+          borderRadius: 10,
+          fontSize: 13,
+          border: isMatched ? "0.5px solid #4ADE80" : isWrong ? "0.5px solid #F87171" : "0.5px solid var(--border)",
+          background: isMatched ? "#14532D" : isWrong ? "#7F1D1D" : "var(--bg-card)",
+          opacity: isMatched ? 0.6 : 1
+        }
+      },
+      pt
+    );
+  })));
+}
+function Exercise({ lesson, onFinish, onLoseHeart, hearts, onItemResult }) {
+  const [index, setIndex] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [textInput, setTextInput] = useState("");
+  const [arrangeChosen, setArrangeChosen] = useState([]);
+  const [checked, setChecked] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [error, setError] = useState("");
+  const [correctCount, setCorrectCount] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [silentMode, setSilentMode] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+  const item = lesson.items[index];
+  const effectiveType = item.type === "listen" && silentMode ? "arrange" : item.type;
+  const arrangeReverse = item.type === "arrange" && item.pt ? (item.answer.length + item.pt.length) % 2 === 0 : false;
+  const pct = Math.round(index / lesson.items.length * 100);
+  const arrangeBank = React.useMemo(() => {
+    if (effectiveType !== "arrange") return [];
+    const targetText = arrangeReverse ? item.pt : item.answer;
+    const distractorPool = arrangeReverse ? PT_DISTRACTOR_WORDS : DISTRACTOR_WORDS;
+    const correctWords = targetText.split(" ");
+    const wordCount = correctWords.length;
+    const distractorCount = wordCount <= 3 ? 2 : wordCount <= 5 ? 3 : 4;
+    const lowerAnswer = correctWords.map((w) => w.toLowerCase());
+    const pool = distractorPool.filter((w) => !lowerAnswer.includes(w.toLowerCase()));
+    const decoys = shuffle(pool).slice(0, distractorCount);
+    const all = [
+      ...correctWords.map((w, i) => ({ word: w, id: i })),
+      ...decoys.map((w, i) => ({ word: w, id: correctWords.length + i }))
+    ];
+    return shuffle(all);
+  }, [item, effectiveType, arrangeReverse]);
+  const sourceKey = item.sourceKey || `${lesson.id}-${index}`;
+  const mcOptions = React.useMemo(() => item.type === "mc" ? shuffle(item.options) : [], [item]);
+  function registerResult(ok) {
+    setIsCorrect(ok);
+    setChecked(true);
+    if (ok) {
+      setCorrectCount((c) => c + 1);
+      setCombo((c) => c + 1);
+    } else {
+      setCombo(0);
+    }
+    onItemResult(item, ok, sourceKey);
+  }
+  function check() {
+    let ok;
+    if (effectiveType === "mc") {
+      if (!selected) {
+        setError("Escolha uma op\xE7\xE3o primeiro");
+        return;
+      }
+      ok = selected === item.answer;
+    } else if (effectiveType === "arrange") {
+      if (arrangeChosen.length === 0) {
+        setError("Monte a frase primeiro");
+        return;
+      }
+      const built = arrangeChosen.map((id) => arrangeBank.find((b) => b.id === id).word).join(" ");
+      const targetText = arrangeReverse ? item.pt : item.answer;
+      ok = normalize(built) === normalize(targetText);
+    } else {
+      if (!textInput.trim()) {
+        setError("Digite uma resposta primeiro");
+        return;
+      }
+      ok = normalize(textInput) === normalize(item.answer);
+    }
+    setError("");
+    playTone(ok ? "correct" : "wrong");
+    if (!ok) onLoseHeart();
+    registerResult(ok);
+  }
+  function handleMatchDone(hadMistake) {
+    const ok = !hadMistake;
+    playTone(ok ? "correct" : "wrong");
+    registerResult(ok);
+  }
+  function next() {
+    if (index + 1 >= lesson.items.length) {
+      onFinish(correctCount);
+      return;
+    }
+    setIndex((i) => i + 1);
+    setSelected(null);
+    setTextInput("");
+    setArrangeChosen([]);
+    setChecked(false);
+    setError("");
+    setSilentMode(false);
+    setShowHint(false);
+  }
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" } }, /* @__PURE__ */ React.createElement(HeartsBar, { hearts }), /* @__PURE__ */ React.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ React.createElement(ProgressBar, { pct, color: lesson.color })), combo >= 2 && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 3, color: "#FF9600", fontWeight: 700, fontSize: 13, flexShrink: 0 } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-flame", style: { fontSize: 16 }, "aria-hidden": "true" }), combo)), /* @__PURE__ */ React.createElement("div", { style: { background: "var(--bg-card)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "1.25rem" } }, item.review && /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        display: "inline-block",
+        background: "#1E3A5F",
+        color: "#7DB8F5",
+        fontSize: 10,
+        fontWeight: 700,
+        padding: "3px 10px",
+        borderRadius: 999,
+        marginBottom: 10,
+        letterSpacing: 0.5
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-history", style: { fontSize: 11, marginRight: 3 }, "aria-hidden": "true" }),
+    "REVIS\xC3O DE LI\xC7\xC3O ANTERIOR"
+  ), item.grammarCheck && /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        display: "inline-block",
+        background: "#3F2E5C",
+        color: "#C9A8F5",
+        fontSize: 10,
+        fontWeight: 700,
+        padding: "3px 10px",
+        borderRadius: 999,
+        marginBottom: 10,
+        letterSpacing: 0.5
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-bulb", style: { fontSize: 11, marginRight: 3 }, "aria-hidden": "true" }),
+    "VERIFICA\xC7\xC3O DE GRAM\xC1TICA"
+  ), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 15, fontWeight: 500, margin: "0 0 1rem", flex: 1 } }, item.type === "listen" && silentMode ? `Monte a frase: "${item.pt}"` : arrangeReverse ? `Traduza para portugu\xEAs: "${item.answer}"` : item.prompt), item.audio && item.type !== "listen" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => speak(item.audio),
+      "aria-label": "Ouvir pron\xFAncia",
+      style: {
+        width: 36,
+        height: 36,
+        borderRadius: "50%",
+        border: "0.5px solid var(--border-strong)",
+        background: "var(--bg-page)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-volume", style: { fontSize: 18 }, "aria-hidden": "true" })
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => speak(item.audio, 0.45),
+      "aria-label": "Ouvir mais devagar",
+      style: {
+        width: 36,
+        height: 36,
+        borderRadius: "50%",
+        border: "0.5px solid var(--border-strong)",
+        background: "var(--bg-page)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-turtle", style: { fontSize: 18 }, "aria-hidden": "true" })
+  ))), item.type === "listen" && !silentMode && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 14, marginBottom: 12 } }, /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => speak(item.audio),
+      "aria-label": "Ouvir a frase",
+      style: {
+        width: 64,
+        height: 64,
+        borderRadius: "50%",
+        border: "none",
+        borderBottom: "4px solid #0F6E56",
+        background: "#1D9E75",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-volume-2", style: { fontSize: 30, color: "#fff" }, "aria-hidden": "true" })
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => speak(item.audio, 0.45),
+      "aria-label": "Ouvir mais devagar",
+      style: {
+        width: 64,
+        height: 64,
+        borderRadius: "50%",
+        border: "none",
+        borderBottom: "4px solid var(--text-secondary)",
+        background: "var(--text-muted)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-turtle", style: { fontSize: 28, color: "#fff" }, "aria-hidden": "true" })
+  )), showHint ? /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px" } }, "Significa: ", /* @__PURE__ */ React.createElement("strong", { style: { color: "var(--text-primary)" } }, item.pt)) : /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setShowHint(true),
+      style: {
+        display: "block",
+        margin: "0 auto 12px",
+        padding: "6px 14px",
+        borderRadius: 999,
+        border: "0.5px solid var(--border-strong)",
+        background: "transparent",
+        fontSize: 12,
+        color: "var(--text-secondary)"
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-bulb", style: { fontSize: 13, marginRight: 4 }, "aria-hidden": "true" }),
+    "Nunca ouvi isto \u2014 dar dica"
+  ), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setSilentMode(true),
+      style: {
+        display: "block",
+        margin: "0 auto 16px",
+        padding: "6px 14px",
+        borderRadius: 999,
+        border: "0.5px solid var(--border-strong)",
+        background: "transparent",
+        fontSize: 12,
+        color: "var(--text-secondary)"
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-volume-off", style: { fontSize: 13, marginRight: 4 }, "aria-hidden": "true" }),
+    "Agora n\xE3o posso ouvir \u2014 mudar exerc\xEDcio"
+  )), item.type === "listen" && silentMode && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: "var(--text-secondary)", margin: "0 0 12px", textAlign: "center" } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-volume-off", style: { fontSize: 13, marginRight: 4 }, "aria-hidden": "true" }), "Modo silencioso \u2014 monte a frase em vez de ouvir"), effectiveType === "mc" ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, mcOptions.map((opt) => {
+    const isSelected = selected === opt;
+    const showCorrect = checked && opt === item.answer;
+    const showWrong = checked && isSelected && opt !== item.answer;
+    return /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        key: opt,
+        onClick: () => !checked && setSelected(opt),
+        disabled: checked,
+        style: {
+          textAlign: "left",
+          padding: "10px 14px",
+          borderRadius: "10px",
+          border: showCorrect ? "0.5px solid #4ADE80" : showWrong ? "0.5px solid #F87171" : isSelected ? "0.5px solid #7DB8F5" : "0.5px solid var(--border)",
+          background: showCorrect ? "#14532D" : showWrong ? "#7F1D1D" : isSelected ? "#1E3A5F" : "var(--bg-card)",
+          fontSize: 14
+        }
+      },
+      opt
+    );
+  })) : effectiveType === "arrange" ? /* @__PURE__ */ React.createElement("div", null, arrangeReverse && (showHint ? /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, margin: "0 0 12px" } }, item.answer.split(" ").map((w, i) => {
+    const gloss = wordGloss(w);
+    return /* @__PURE__ */ React.createElement("span", { key: i, style: { fontSize: 12, background: "var(--bg-chip)", borderRadius: 6, padding: "4px 8px", color: "var(--text-secondary)" } }, w, gloss ? ` \u2014 ${gloss}` : "");
+  })) : /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => setShowHint(true),
+      style: {
+        display: "block",
+        margin: "0 0 12px",
+        padding: "6px 14px",
+        borderRadius: 999,
+        border: "0.5px solid var(--border-strong)",
+        background: "transparent",
+        fontSize: 12,
+        color: "var(--text-secondary)"
+      }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-bulb", style: { fontSize: 13, marginRight: 4 }, "aria-hidden": "true" }),
+    "N\xE3o conhe\xE7o essas palavras \u2014 dar dica"
+  )), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, minHeight: 32, padding: "8px 0", borderBottom: "2px solid var(--border)", marginBottom: 12 } }, arrangeChosen.length === 0 ? /* @__PURE__ */ React.createElement("span", { style: { color: "var(--text-muted)", fontSize: 13 } }, "Toque nas palavras abaixo, na ordem certa") : arrangeChosen.map((id) => {
+    const tile = arrangeBank.find((b) => b.id === id);
+    return /* @__PURE__ */ React.createElement("span", { key: id, style: { fontSize: 14, background: "#1E3A5F", border: "0.5px solid #7DB8F5", borderRadius: 6, padding: "4px 8px" } }, tile.word);
+  })), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } }, arrangeBank.map((b) => {
+    const used = arrangeChosen.includes(b.id);
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: b.id,
+        style: {
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 2,
+          borderRadius: 8,
+          border: used ? "0.5px solid var(--border-strong)" : "0.5px solid var(--border)",
+          background: used ? "var(--border)" : "var(--bg-page)",
+          opacity: used ? 0.5 : 1
+        }
+      },
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          onClick: () => !checked && setArrangeChosen((prev) => used ? prev.filter((x) => x !== b.id) : [...prev, b.id]),
+          disabled: checked,
+          style: {
+            padding: "8px 4px 8px 12px",
+            border: "none",
+            background: "transparent",
+            fontSize: 14,
+            textDecoration: used ? "line-through" : "none"
+          }
+        },
+        b.word
+      ),
+      !arrangeReverse && /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          onClick: () => speak(b.word),
+          "aria-label": "Ouvir palavra",
+          style: { width: 24, height: 24, marginRight: 6, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }
+        },
+        /* @__PURE__ */ React.createElement("i", { className: "ti ti-volume", style: { fontSize: 12 }, "aria-hidden": "true" })
+      )
+    );
+  }))) : effectiveType === "match" ? /* @__PURE__ */ React.createElement(MatchExercise, { item, onLoseHeart, onDone: handleMatchDone }) : /* @__PURE__ */ React.createElement(
+    "input",
+    {
+      type: "text",
+      value: textInput,
+      onChange: (e) => setTextInput(e.target.value),
+      disabled: checked,
+      placeholder: "Escreva em noruegu\xEAs",
+      style: { width: "100%" }
+    }
+  ), error && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "#F87171", margin: "8px 0 0" } }, error), checked && /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        marginTop: 12,
+        padding: "10px 12px",
+        borderRadius: "10px",
+        background: isCorrect ? "#14532D" : "#7F1D1D",
+        fontSize: 13,
+        color: isCorrect ? "#4ADE80" : "#F87171"
+      }
+    },
+    isCorrect ? "Certo!" : arrangeReverse ? `Resposta certa: ${item.pt}` : item.answer ? `Resposta certa: ${item.answer}` : "Quase \u2014 repare nas duplas certas."
+  ), checked && ["translate", "arrange", "listen"].includes(item.type) && item.answer && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("p", { style: { fontSize: 11, color: "var(--text-muted)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: 0.4 } }, "Palavra por palavra"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } }, item.answer.split(" ").map((w, i) => {
+    const gloss = wordGloss(w);
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        key: i,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          background: "var(--bg-page)",
+          border: "0.5px solid var(--border)",
+          borderRadius: 8,
+          padding: "4px 4px 4px 10px"
+        }
+      },
+      /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12 } }, w, gloss ? /* @__PURE__ */ React.createElement("span", { style: { color: "var(--text-muted)" } }, " \u2014 ", gloss) : null),
+      /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          onClick: () => speak(w),
+          "aria-label": "Ouvir palavra",
+          style: { width: 22, height: 22, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }
+        },
+        /* @__PURE__ */ React.createElement("i", { className: "ti ti-volume", style: { fontSize: 11 }, "aria-hidden": "true" })
+      )
+    );
+  })))), effectiveType === "match" && !checked ? /* @__PURE__ */ React.createElement("p", { style: { textAlign: "center", fontSize: 12, color: "var(--text-muted)", marginTop: 16 } }, "Toque nas palavras para formar os pares") : /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      className: "chunky-btn",
+      style: { marginTop: 16, "--btn-bg": lesson.color, "--btn-border": darken(lesson.color, 45) },
+      onClick: checked ? next : check
+    },
+    checked ? index + 1 >= lesson.items.length ? "Concluir li\xE7\xE3o" : "Continuar" : "Verificar"
+  ));
+}
+function GrammarCard({ grammar, color, onContinue }) {
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { background: "var(--bg-card)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "1.25rem", marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 32, height: 32, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center" } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-bulb", style: { fontSize: 16, color: "#fff" }, "aria-hidden": "true" })), /* @__PURE__ */ React.createElement("p", { style: { fontWeight: 500, fontSize: 15, margin: 0 } }, grammar.title)), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "var(--text-secondary)", margin: 0, lineHeight: 1.7 } }, grammar.text)), /* @__PURE__ */ React.createElement("button", { className: "chunky-btn", style: { "--btn-bg": color, "--btn-border": darken(color, 45) }, onClick: onContinue }, "Come\xE7ar exerc\xEDcios"));
+}
+function VideoIntro({ lesson, onContinue }) {
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { position: "relative", width: "100%", paddingTop: "56.25%", borderRadius: 12, overflow: "hidden", background: "var(--bg-page)", marginBottom: 16 } }, /* @__PURE__ */ React.createElement(
+    "iframe",
+    {
+      src: `https://www.youtube.com/embed/${lesson.videoId}`,
+      title: lesson.title,
+      allow: "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+      allowFullScreen: true,
+      style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }
+    }
+  )), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "var(--text-secondary)", margin: "0 0 16px", lineHeight: 1.7 } }, "Assista ao v\xEDdeo e depois pratique as ", lesson.items.length, " palavras e frases que voc\xEA escolheu dele."), /* @__PURE__ */ React.createElement("button", { className: "chunky-btn", style: { "--btn-bg": lesson.color, "--btn-border": darken(lesson.color, 45) }, onClick: onContinue }, "Come\xE7ar exerc\xEDcios"));
+}
+function ThemeSettings({ hue, lightness, onChange, onClose }) {
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { fontWeight: 500, fontSize: 18, margin: "0 0 4px" } }, "Tema"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--text-secondary)", margin: "0 0 20px" } }, "Escolhe a cor e ajusta a claridade a teu gosto."), /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        background: "var(--bg-card)",
+        border: "0.5px solid var(--border)",
+        borderRadius: 12,
+        padding: "1.25rem",
+        marginBottom: 20
+      }
+    },
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 } }, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: "var(--text-secondary)" } }, "Cor"), /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "color",
+        value: hueToHex(hue),
+        onChange: (e) => onChange({ hue: hexToHue(e.target.value), lightness }),
+        style: { width: 44, height: 32, border: "none", borderRadius: 6, background: "transparent", padding: 0 }
+      }
+    )),
+    /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: "var(--text-secondary)" } }, "Claridade"),
+    /* @__PURE__ */ React.createElement(
+      "input",
+      {
+        type: "range",
+        min: "6",
+        max: "70",
+        value: lightness,
+        onChange: (e) => onChange({ hue, lightness: Number(e.target.value) }),
+        style: { width: "100%", margin: "8px 0 4px" }
+      }
+    ),
+    /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)" } }, /* @__PURE__ */ React.createElement("span", null, "Escuro"), /* @__PURE__ */ React.createElement("span", null, "Claro")),
+    /* @__PURE__ */ React.createElement(
+      "div",
+      {
+        style: {
+          marginTop: 16,
+          padding: "14px",
+          borderRadius: 10,
+          background: "var(--bg-page)",
+          border: "0.5px solid var(--border)"
+        }
+      },
+      /* @__PURE__ */ React.createElement("div", { style: { background: "var(--bg-chip)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "var(--text-primary)" } }, "Pr\xE9-visualiza\xE7\xE3o do fundo e texto")
+    )
+  ), /* @__PURE__ */ React.createElement("button", { className: "chunky-btn", onClick: onClose }, "Conclu\xEDdo"));
+}
+function CreateLesson({ onCreate, onCancel }) {
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [pairs, setPairs] = useState([{ no: "", pt: "" }, { no: "", pt: "" }, { no: "", pt: "" }, { no: "", pt: "" }]);
+  const [error, setError] = useState("");
+  function updatePair(i, field, value) {
+    setPairs((prev) => prev.map((p, idx) => idx === i ? { ...p, [field]: value } : p));
+  }
+  function addRow() {
+    if (pairs.length >= 8) return;
+    setPairs((prev) => [...prev, { no: "", pt: "" }]);
+  }
+  function removeRow(i) {
+    if (pairs.length <= 3) return;
+    setPairs((prev) => prev.filter((_, idx) => idx !== i));
+  }
+  function submit() {
+    if (!title.trim()) {
+      setError("D\xEA um nome para a li\xE7\xE3o");
+      return;
+    }
+    const videoId = extractYouTubeId(url.trim());
+    if (!videoId) {
+      setError("Cole um link v\xE1lido do YouTube");
+      return;
+    }
+    const filled = pairs.map((p) => ({ no: p.no.trim(), pt: p.pt.trim() })).filter((p) => p.no && p.pt);
+    if (filled.length < 3) {
+      setError("Adicione pelo menos 3 palavras ou frases com tradu\xE7\xE3o");
+      return;
+    }
+    const color = CUSTOM_COLORS[Math.floor(Math.random() * CUSTOM_COLORS.length)];
+    onCreate({
+      id: `custom-${Date.now()}`,
+      title: title.trim(),
+      color,
+      custom: true,
+      videoId,
+      items: buildExercisesFromPairs(filled)
+    });
+    setError("");
+  }
+  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("p", { style: { fontWeight: 500, fontSize: 18, margin: "0 0 4px" } }, "Nova li\xE7\xE3o a partir de v\xEDdeo"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--text-secondary)", margin: "0 0 16px" } }, "Cole o link do YouTube e as palavras ou frases que voc\xEA quer praticar. O app gera 5 exerc\xEDcios a partir delas."), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: "var(--text-secondary)" } }, "Nome da li\xE7\xE3o"), /* @__PURE__ */ React.createElement("input", { type: "text", value: title, onChange: (e) => setTitle(e.target.value), placeholder: "Ex: Vocabul\xE1rio do v\xEDdeo de comida", style: { width: "100%", marginBottom: 12 } }), /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: "var(--text-secondary)" } }, "Link do YouTube"), /* @__PURE__ */ React.createElement("input", { type: "text", value: url, onChange: (e) => setUrl(e.target.value), placeholder: "https://www.youtube.com/watch?v=...", style: { width: "100%", marginBottom: 16 } }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--text-secondary)", margin: "0 0 8px" } }, "Palavras/frases (noruegu\xEAs \u2192 portugu\xEAs)"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 } }, pairs.map((p, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", gap: 8, alignItems: "center" } }, /* @__PURE__ */ React.createElement("input", { type: "text", value: p.no, onChange: (e) => updatePair(i, "no", e.target.value), placeholder: "Noruegu\xEAs", style: { flex: 1 } }), /* @__PURE__ */ React.createElement("input", { type: "text", value: p.pt, onChange: (e) => updatePair(i, "pt", e.target.value), placeholder: "Portugu\xEAs", style: { flex: 1 } }), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: () => removeRow(i),
+      "aria-label": "Remover linha",
+      disabled: pairs.length <= 3,
+      style: { width: 32, height: 32, borderRadius: "10px", border: "0.5px solid var(--border)", background: "var(--bg-card)", flexShrink: 0, opacity: pairs.length <= 3 ? 0.4 : 1 }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-x", style: { fontSize: 14 }, "aria-hidden": "true" })
+  )))), /* @__PURE__ */ React.createElement(
+    "button",
+    {
+      onClick: addRow,
+      disabled: pairs.length >= 8,
+      style: { width: "100%", padding: "8px", marginBottom: 16, borderRadius: "10px", border: "0.5px dashed var(--border-strong)", background: "transparent", fontSize: 13, opacity: pairs.length >= 8 ? 0.4 : 1 }
+    },
+    /* @__PURE__ */ React.createElement("i", { className: "ti ti-plus", style: { fontSize: 14, marginRight: 4 }, "aria-hidden": "true" }),
+    "Adicionar linha"
+  ), error && /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "#F87171", margin: "0 0 12px" } }, error), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ React.createElement("button", { className: "chunky-btn-outline", onClick: onCancel, style: { flex: 1 } }, "Cancelar"), /* @__PURE__ */ React.createElement("button", { className: "chunky-btn", onClick: submit, style: { flex: 2 } }, "Criar li\xE7\xE3o")));
+}
+function ResultScreen({ correct, total, xpGained, isPerfect, checkpoint, passed, required, onDone }) {
+  const [displayXp, setDisplayXp] = useState(0);
+  const message = checkpoint ? passed ? "Passaste! O pr\xF3ximo n\xEDvel foi desbloqueado." : `N\xE3o chegou l\xE1 desta vez \u2014 precisas de ${required}/${total} para passar. Podes tentar de novo quando quiseres.` : correct === total ? "Perfeito! Voc\xEA acertou tudo." : correct >= total / 2 ? "Boa! Continue praticando." : "Cada erro te aproxima de aprender. Bora de novo?";
+  useEffect(() => {
+    if (xpGained === 0) return;
+    const steps = 16;
+    const step = Math.max(1, Math.round(xpGained / steps));
+    let current = 0;
+    const id = setInterval(() => {
+      current = Math.min(xpGained, current + step);
+      setDisplayXp(current);
+      if (current >= xpGained) clearInterval(id);
+    }, 30);
+    return () => clearInterval(id);
+  }, [xpGained]);
+  return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "1.5rem 0" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "center", marginBottom: 12 } }, /* @__PURE__ */ React.createElement(Puffin, { size: 56 })), isPerfect && /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        display: "inline-block",
+        background: "#78350F",
+        color: "#FCD34D",
+        fontSize: 11,
+        fontWeight: 700,
+        padding: "4px 12px",
+        borderRadius: 999,
+        marginBottom: 8,
+        letterSpacing: 0.4
+      }
+    },
+    "LI\xC7\xC3O PERFEITA \xB7 +20 B\xD4NUS"
+  ), checkpoint && /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        display: "inline-block",
+        background: passed ? "#14532D" : "#7F1D1D",
+        color: passed ? "#4ADE80" : "#F87171",
+        fontSize: 11,
+        fontWeight: 700,
+        padding: "4px 12px",
+        borderRadius: 999,
+        marginBottom: 8,
+        letterSpacing: 0.4
+      }
+    },
+    passed ? "TESTE DE N\xCDVEL APROVADO" : "TESTE DE N\xCDVEL N\xC3O APROVADO"
+  ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 18, fontWeight: 500, margin: "0 0 4px" } }, checkpoint ? "Teste conclu\xEDdo!" : "Li\xE7\xE3o conclu\xEDda!"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "var(--text-secondary)", margin: "0 0 4px" } }, correct, "/", total, " corretas \xB7 ", /* @__PURE__ */ React.createElement("span", { style: { color: "#1CB0F6", fontWeight: 700 } }, "+", displayXp, " XP")), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--text-muted)", margin: "0 0 20px" } }, message), /* @__PURE__ */ React.createElement("button", { className: "chunky-btn", onClick: onDone, style: { width: "auto", padding: "14px 28px" } }, "Voltar ao mapa"));
+}
+function OutOfHearts({ onRestart }) {
+  return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "1.5rem 0" } }, /* @__PURE__ */ React.createElement("i", { className: "ti ti-heart-broken", style: { fontSize: 40, color: "#F87171" }, "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 18, fontWeight: 500, margin: "12px 0 4px" } }, "Sem vidas"), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 14, color: "var(--text-secondary)", margin: "0 0 20px" } }, "Suas vidas voltam quando voc\xEA tentar de novo."), /* @__PURE__ */ React.createElement("button", { className: "chunky-btn", onClick: onRestart, style: { width: "auto", padding: "14px 28px" } }, "Tentar de novo"));
+}
+function LoadingScreen() {
+  return /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: "3rem 0" } }, /* @__PURE__ */ React.createElement(Puffin, { size: 40 }), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 13, color: "var(--text-muted)", marginTop: 12 } }, "Carregando seu progresso..."));
+}
+function NorskApp() {
+  const [screen, setScreen] = useState("loading");
+  const [customLessons, setCustomLessons] = useState([]);
+  const [activeLessonId, setActiveLessonId] = useState(null);
+  const [progress, setProgress] = useState({});
+  const [xp, setXp] = useState(0);
+  const [streak, setStreak] = useState(1);
+  const [hearts, setHearts] = useState(TOTAL_HEARTS);
+  const [mistakes, setMistakes] = useState([]);
+  const [dailyXp, setDailyXp] = useState(0);
+  const [checkpointsPassed, setCheckpointsPassed] = useState({});
+  const [checkpointDates, setCheckpointDates] = useState({});
+  const [exerciseStats, setExerciseStats] = useState({});
+  const [themeHue, setThemeHue] = useState(160);
+  const [themeLightness, setThemeLightness] = useState(14);
+  const [lastResult, setLastResult] = useState({ correct: 0, total: 0, xp: 0 });
+  const voicesLoaded = useRef(false);
+  const loaded = useRef(false);
+  useEffect(() => {
+    if (window.speechSynthesis && !voicesLoaded.current) {
+      window.speechSynthesis.getVoices();
+      voicesLoaded.current = true;
+    }
+    (async () => {
+      const saved = await loadState();
+      const today = dateStr(/* @__PURE__ */ new Date());
+      let nextStreak = 1;
+      if (saved) {
+        setXp(saved.xp || 0);
+        setProgress(saved.progress || {});
+        setCustomLessons(saved.customLessons || []);
+        setMistakes(saved.mistakes || []);
+        setCheckpointsPassed(saved.checkpointsPassed || {});
+        setCheckpointDates(saved.checkpointDates || {});
+        setExerciseStats(saved.exerciseStats || {});
+        if (typeof saved.themeHue === "number") setThemeHue(saved.themeHue);
+        if (typeof saved.themeLightness === "number") setThemeLightness(saved.themeLightness);
+        setDailyXp(saved.dailyXpDate === today ? saved.dailyXp || 0 : 0);
+        const yesterday = dateStr(new Date(Date.now() - 864e5));
+        if (saved.lastActiveDate === today) nextStreak = saved.streak || 1;
+        else if (saved.lastActiveDate === yesterday) nextStreak = (saved.streak || 1) + 1;
+        else nextStreak = 1;
+      }
+      setStreak(nextStreak);
+      loaded.current = true;
+      setScreen("map");
+    })();
+  }, []);
+  useEffect(() => {
+    if (!loaded.current) return;
+    const today = dateStr(/* @__PURE__ */ new Date());
+    saveState({ xp, progress, customLessons, streak, mistakes, dailyXp, checkpointsPassed, checkpointDates, exerciseStats, themeHue, themeLightness, dailyXpDate: today, lastActiveDate: today });
+  }, [xp, progress, customLessons, streak, mistakes, dailyXp, checkpointsPassed, checkpointDates, exerciseStats, themeHue, themeLightness]);
+  const todayStr = dateStr(/* @__PURE__ */ new Date());
+  const dueMistakes = mistakes.filter((m) => !m.nextDue || m.nextDue <= todayStr);
+  const reviewLesson = dueMistakes.length > 0 ? {
+    id: "review",
+    title: "Revis\xE3o",
+    color: "#111111",
+    custom: true,
+    special: "review",
+    items: dueMistakes.slice(0, 5).map((m) => ({ ...m.item, sourceKey: m.sourceKey }))
+  } : null;
+  const tier1Lessons = React.useMemo(() => LESSONS.filter((l) => l.tier === 1), []);
+  const tier2Lessons = React.useMemo(() => LESSONS.filter((l) => l.tier === 2), []);
+  const tier3Lessons = React.useMemo(() => LESSONS.filter((l) => l.tier === 3), []);
+  function buildCheckpoint(tierNum, tierLessons) {
+    const pool = [];
+    tierLessons.forEach((l) => {
+      l.items.forEach((it, i) => {
+        if (it.type !== "match") pool.push({ ...it, sourceKey: `${l.id}-${i}` });
+      });
+    });
+    const sample = shuffle(pool).slice(0, 30);
+    const passRequirement = Math.ceil(sample.length * (25 / 30));
+    return {
+      id: `checkpoint-${tierNum}`,
+      title: `Teste de n\xEDvel ${tierNum}`,
+      color: TIER_COLORS[tierNum],
+      special: "checkpoint",
+      tier: tierNum,
+      passRequirement,
+      items: sample
+    };
+  }
+  const checkpoint1 = React.useMemo(() => tier1Lessons.length > 0 ? buildCheckpoint(1, tier1Lessons) : null, [tier1Lessons]);
+  const checkpoint2 = React.useMemo(() => tier2Lessons.length > 0 ? buildCheckpoint(2, tier2Lessons) : null, [tier2Lessons]);
+  const orderedTiered = [
+    ...tier1Lessons,
+    ...checkpoint1 ? [checkpoint1] : [],
+    ...tier2Lessons,
+    ...checkpoint2 ? [checkpoint2] : [],
+    ...tier3Lessons
+  ];
+  const allLessons = reviewLesson ? [reviewLesson, ...orderedTiered, ...customLessons] : [...orderedTiered, ...customLessons];
+  const activeLesson = React.useMemo(() => {
+    const base = allLessons.find((l) => l.id === activeLessonId);
+    if (!base) return null;
+    if (base.custom || base.special) return base;
+    const idx = LESSONS.findIndex((l) => l.id === base.id);
+    const preceding = idx > 0 ? LESSONS.slice(0, idx) : [];
+    const withMatch = preceding.length > 0 ? augmentMatchItems(base, preceding, exerciseStats) : base;
+    return injectGrammarCheck(withMatch);
+  }, [activeLessonId]);
+  function startLesson(id) {
+    setActiveLessonId(id);
+    const lesson = allLessons.find((l) => l.id === id);
+    if (lesson.special === "review" || lesson.special === "checkpoint") setScreen("exercise");
+    else setScreen(lesson.custom ? "video" : "grammar");
+  }
+  function createLesson(lesson) {
+    setCustomLessons((prev) => [...prev, lesson]);
+    setScreen("map");
+  }
+  function handleItemResult(item, correct, sourceKey) {
+    const today = dateStr(/* @__PURE__ */ new Date());
+    setExerciseStats((prev) => {
+      const s = prev[item.type] || { correct: 0, total: 0 };
+      return { ...prev, [item.type]: { correct: s.correct + (correct ? 1 : 0), total: s.total + 1 } };
+    });
+    setMistakes((prev) => {
+      const idx = prev.findIndex((m) => m.sourceKey === sourceKey);
+      if (correct) {
+        if (idx === -1) return prev;
+        const box = (prev[idx].box || 0) + 1;
+        if (box >= SR_INTERVALS.length) return prev.filter((_, i) => i !== idx);
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], box, nextDue: addDays(today, SR_INTERVALS[box]) };
+        return copy;
+      }
+      if (idx !== -1) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], box: 0, nextDue: today };
+        return copy;
+      }
+      return [...prev, { sourceKey, item, box: 0, nextDue: today }].slice(-40);
+    });
+  }
+  function loseHeart() {
+    setHearts((h) => {
+      const nh = Math.max(0, h - 1);
+      if (nh === 0) setTimeout(() => setScreen("dead"), 600);
+      return nh;
+    });
+  }
+  function finishLesson(correctCount) {
+    const total = activeLesson.items.length;
+    const perfect = correctCount === total;
+    const gained = correctCount * 10 + (perfect && activeLesson.special !== "checkpoint" ? 20 : 0);
+    setXp((x) => x + gained);
+    setDailyXp((d) => d + gained);
+    if (activeLesson.special === "checkpoint") {
+      const passed = correctCount >= (activeLesson.passRequirement || Math.ceil(total * 25 / 30));
+      if (passed) {
+        setProgress((p) => ({ ...p, [activeLessonId]: { completed: total } }));
+        setCheckpointsPassed((prev) => ({ ...prev, [activeLesson.tier]: true }));
+        setCheckpointDates((prev) => ({ ...prev, [activeLesson.tier]: dateStr(/* @__PURE__ */ new Date()) }));
+      }
+      setLastResult({ correct: correctCount, total, xp: gained, perfect: false, checkpoint: true, passed, required: activeLesson.passRequirement });
+      setScreen("result");
+      return;
+    }
+    if (activeLesson.special !== "review") {
+      setProgress((p) => ({ ...p, [activeLessonId]: { completed: total } }));
+    }
+    setLastResult({ correct: correctCount, total, xp: gained, perfect });
+    setScreen("result");
+  }
+  function backToMap() {
+    setScreen("map");
+    setActiveLessonId(null);
+  }
+  function restartHearts() {
+    setHearts(TOTAL_HEARTS);
+    setScreen("map");
+    setActiveLessonId(null);
+  }
+  async function resetProgress() {
+    setXp(0);
+    setProgress({});
+    setCustomLessons([]);
+    setStreak(1);
+    setHearts(TOTAL_HEARTS);
+    setMistakes([]);
+    setDailyXp(0);
+    setCheckpointsPassed({});
+    setCheckpointDates({});
+    setExerciseStats({});
+    const today = dateStr(/* @__PURE__ */ new Date());
+    await saveState({ xp: 0, progress: {}, customLessons: [], streak: 1, mistakes: [], dailyXp: 0, checkpointsPassed: {}, checkpointDates: {}, exerciseStats: {}, dailyXpDate: today, lastActiveDate: today });
+  }
+  return /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        fontFamily: `"Segoe UI", system-ui, -apple-system, sans-serif`,
+        minHeight: "100%",
+        padding: "12px 14px",
+        ...computeTheme(themeHue, themeLightness),
+        background: "var(--bg-page)",
+        color: "var(--text-primary)"
+      }
+    },
+    /* @__PURE__ */ React.createElement(GameStyles, null),
+    screen !== "loading" && /* @__PURE__ */ React.createElement(
+      TopBar,
+      {
+        streak,
+        xp,
+        hearts,
+        dailyXp,
+        showHearts: screen === "exercise" || screen === "dead",
+        onOpenSettings: () => setScreen("settings")
+      }
+    ),
+    screen === "loading" && /* @__PURE__ */ React.createElement(LoadingScreen, null),
+    screen === "map" && /* @__PURE__ */ React.createElement(
+      LessonMap,
+      {
+        lessons: allLessons,
+        progress,
+        onSelect: startLesson,
+        onCreateClick: () => setScreen("create"),
+        onReset: resetProgress,
+        checkpointsPassed,
+        checkpointDates
+      }
+    ),
+    screen === "settings" && /* @__PURE__ */ React.createElement(
+      ThemeSettings,
+      {
+        hue: themeHue,
+        lightness: themeLightness,
+        onChange: ({ hue, lightness }) => {
+          setThemeHue(hue);
+          setThemeLightness(lightness);
+        },
+        onClose: () => setScreen("map")
+      }
+    ),
+    screen === "create" && /* @__PURE__ */ React.createElement(CreateLesson, { onCreate: createLesson, onCancel: () => setScreen("map") }),
+    screen === "video" && activeLesson && /* @__PURE__ */ React.createElement(VideoIntro, { lesson: activeLesson, onContinue: () => setScreen("exercise") }),
+    screen === "grammar" && activeLesson && /* @__PURE__ */ React.createElement(GrammarCard, { grammar: activeLesson.grammar, color: activeLesson.color, onContinue: () => setScreen("exercise") }),
+    screen === "exercise" && activeLesson && /* @__PURE__ */ React.createElement(Exercise, { lesson: activeLesson, hearts, onLoseHeart: loseHeart, onFinish: finishLesson, onItemResult: handleItemResult }),
+    screen === "result" && /* @__PURE__ */ React.createElement(
+      ResultScreen,
+      {
+        correct: lastResult.correct,
+        total: lastResult.total,
+        xpGained: lastResult.xp,
+        isPerfect: lastResult.perfect,
+        checkpoint: lastResult.checkpoint,
+        passed: lastResult.passed,
+        required: lastResult.required,
+        onDone: backToMap
+      }
+    ),
+    screen === "dead" && /* @__PURE__ */ React.createElement(OutOfHearts, { onRestart: restartHearts })
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(NorskApp));
+</script>
+</body>
+</html>
